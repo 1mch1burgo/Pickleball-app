@@ -231,7 +231,7 @@ export default function App() {
   };
 
   const maxPlayerCount = parseInt(selectedPlayers || 0, 10);
-const [showRefresh, setShowRefresh] = useState(true);
+
 
 useEffect(() => {
   let lastY = window.scrollY;
