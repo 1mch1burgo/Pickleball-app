@@ -231,7 +231,18 @@ export default function App() {
   };
 
   const maxPlayerCount = parseInt(selectedPlayers || 0, 10);
+const [showRefresh, setShowRefresh] = useState(true);
 
+useEffect(() => {
+  let lastY = window.scrollY;
+  const onScroll = () => {
+    const currentY = window.scrollY;
+    setShowRefresh(currentY < lastY || currentY < 20); // hide when scrolling down
+    lastY = currentY;
+  };
+  window.addEventListener("scroll", onScroll);
+  return () => window.removeEventListener("scroll", onScroll);
+}, []);
   return (
     <div className="min-h-screen bg-gray-100 py-3 px-3 app-container">
       {/* 🔄 Refresh Button */}
@@ -247,7 +258,17 @@ export default function App() {
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
       >
-        <h1 className="text-center text-xl font-bold mb-2">🏓 Pickleball Scheduler</h1>
+       <div className="header-bar">
+  <div className="header-title">
+    🏓 Pickleball Scheduler
+  </div>
+  <button
+    className={`refresh-button ${showRefresh ? "" : "hidden"}`}
+    onClick={() => window.location.reload()}
+  >
+    🔄 Refresh
+  </button>
+</div>
 
         {editing ? (
           <>
