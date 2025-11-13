@@ -23,6 +23,9 @@ export default function App() {
   const [editing, setEditing] = useState(true);
   const [currentRoundIndex, setCurrentRoundIndex] = useState(0);
 
+  const [showRefresh, setShowRefresh] = useState(true);
+  let lastScrollY = 0;
+
   // touch/swipe state:
   const touchStartXRef = useRef(null);
   const touchEndXRef = useRef(null);
@@ -89,9 +92,28 @@ export default function App() {
     setSelectedNumRounds("");
   }, [selectedCourts, selectedPlayers, csvData]);
 
+  // scroll handler for hiding/showing refresh button
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentY = window.scrollY;
+      if (currentY > lastScrollY && currentY > 50) {
+        setShowRefresh(false);
+      } else {
+        setShowRefresh(true);
+      }
+      lastScrollY = currentY;
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // prevent accidental pull-to-refresh
+  useEffect(() => {
+    document.body.style.overscrollBehaviorY = "contain";
+  }, []);
+
   // Helper: extract matches from a CSV row object
   const extractMatches = (row) => {
-    // Find court numbers present by scanning keys for /^(\d+)a$/
     const keys = Object.keys(row);
     const courtNums = new Set();
     keys.forEach((k) => {
@@ -106,7 +128,6 @@ export default function App() {
         const b = row[`${court}b`];
         const c = row[`${court}c`];
         const d = row[`${court}d`];
-        // ignore 'x' or empty values - only include full 4-player courts
         if (a && b && c && d && a !== "x" && b !== "x" && c !== "x" && d !== "x") {
           matches.push({
             court: court,
@@ -120,7 +141,7 @@ export default function App() {
 
   const extractByes = (row) => {
     const byes = [];
-    for (let i = 1; i <= 12; i++) { // generous upper bound
+    for (let i = 1; i <= 12; i++) {
       const key = `b${i}`;
       if (key in row) {
         const val = row[key];
@@ -130,7 +151,6 @@ export default function App() {
     return byes;
   };
 
-  // Build filteredRounds (when user clicks Generate or whenever selections change? We'll build when clicking Generate)
   const buildFilteredRounds = () => {
     if (!selectedPlayers || !selectedCourts || !selectedNumRounds) {
       setFilteredRounds([]);
@@ -149,16 +169,13 @@ export default function App() {
     setCurrentRoundIndex(0);
   };
 
-  // Replace player numbers with names when available
   const replaceNumbersWithNames = (numStr) => {
-    // Some CSV values might be numbers or strings; try parseInt
     const idx = parseInt(numStr, 10);
-    if (isNaN(idx)) return numStr; // not numeric -> return as-is
+    if (isNaN(idx)) return numStr;
     const name = playerNames[idx - 1];
     return name && name.trim() !== "" ? name.trim() : String(idx);
   };
 
-  // Player name input handlers
   const handleNameChange = (i, v) => {
     setPlayerNames((cur) => {
       const copy = cur.slice();
@@ -167,12 +184,10 @@ export default function App() {
     });
   };
 
-  // Move blanks to bottom and shuffle only filled entries
   const randomizePlayers = () => {
     previousNamesRef.current = playerNames.slice();
     const filled = playerNames.filter((p) => p && p.trim() !== "");
     const blanks = playerNames.filter((p) => !p || p.trim() === "");
-    // shuffle filled
     for (let i = filled.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [filled[i], filled[j]] = [filled[j], filled[i]];
@@ -185,17 +200,6 @@ export default function App() {
       setPlayerNames(previousNamesRef.current.slice());
   };
 
-  // Generate / Toggle editing
- // const handleGenerate = () => {
-    //buildFilteredRounds();
-   // setEditing(false);
- // };
-
-  //const handleBackToEdit = () => {
-   // setEditing(true);
- // };
-
-  // Navigation handlers
   const nextRound = () => {
     if (currentRoundIndex < filteredRounds.length - 1) {
       setCurrentRoundIndex((i) => i + 1);
@@ -205,7 +209,6 @@ export default function App() {
     if (currentRoundIndex > 0) setCurrentRoundIndex((i) => i - 1);
   };
 
-  // Touch handlers for swipe
   const onTouchStart = (e) => {
     touchStartXRef.current = e.touches?.[0]?.clientX ?? null;
   };
@@ -228,11 +231,27 @@ export default function App() {
     touchEndXRef.current = null;
   };
 
-  // UI helpers
   const maxPlayerCount = parseInt(selectedPlayers || 0, 10);
+
+  // 🔄 Refresh button handler
+  const handleRefresh = () => {
+    if (window.confirm("Start a new session? All current data will be cleared.")) {
+      window.location.reload();
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-100 py-3 px-3">
+      {/* 🔄 Refresh button */}
+      {showRefresh && (
+        <button
+          className="fixed top-3 right-3 z-50 bg-blue-600 text-white px-4 py-2 rounded-full text-sm font-semibold shadow"
+          onClick={handleRefresh}
+        >
+          🔄 Refresh
+        </button>
+      )}
+
       <div
         className="mx-auto max-w-sm bg-white rounded-2xl shadow p-3"
         onTouchStart={onTouchStart}
@@ -244,7 +263,7 @@ export default function App() {
         {/* EDITING MODE */}
         {editing ? (
           <>
-            {/* Players dropdown (drives courts options) */}
+            {/* Players dropdown */}
             <div className="mb-3">
               <label className="text-xs text-gray-600">Players</label>
               <select
@@ -254,14 +273,12 @@ export default function App() {
               >
                 <option value="">Select number of players</option>
                 {playersOptions.map((p) => (
-                  <option key={p} value={p}>
-                    {p}
-                  </option>
+                  <option key={p} value={p}>{p}</option>
                 ))}
               </select>
             </div>
 
-            {/* Courts dropdown — appears only after players selected */}
+            {/* Courts dropdown */}
             {courtsOptions.length > 0 && (
               <div className="mb-3">
                 <label className="text-xs text-gray-600">Courts</label>
@@ -272,15 +289,13 @@ export default function App() {
                 >
                   <option value="">Select courts</option>
                   {courtsOptions.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
+                    <option key={c} value={c}>{c}</option>
                   ))}
                 </select>
               </div>
             )}
 
-            {/* Rounds dropdown — based on selectedPlayers+selectedCourts */}
+            {/* Rounds dropdown */}
             {roundsOptions.length > 0 && (
               <div className="mb-3">
                 <label className="text-xs text-gray-600">Number of Rounds to show</label>
@@ -291,15 +306,13 @@ export default function App() {
                 >
                   <option value="">Select rounds</option>
                   {roundsOptions.map((r) => (
-                    <option key={r} value={r}>
-                      {r}
-                    </option>
+                    <option key={r} value={r}>{r}</option>
                   ))}
                 </select>
               </div>
             )}
 
-            {/* Player list (scrollable panel) */}
+            {/* Player list */}
             {selectedPlayers && (
               <div className="mb-3">
                 <label className="text-xs text-gray-600">Player names (scroll)</label>
@@ -350,9 +363,8 @@ export default function App() {
             </button>
           </>
         ) : (
-          /* VIEW MODE (generated) */
+          /* VIEW MODE */
           <>
-            {/* top summary + edit */}
             <div className="flex justify-between items-start mb-2">
               <div className="text-xs text-gray-600">
                 <div>Players: <strong>{selectedPlayers}</strong></div>
@@ -361,15 +373,12 @@ export default function App() {
               </div>
               <button
                 className="text-xs text-blue-600 underline"
-                onClick={() => {
-                  setEditing(true);
-                }}
+                onClick={() => setEditing(true)}
               >
                 ✏️ Edit
               </button>
             </div>
 
-            {/* Round card (one at a time) */}
             {filteredRounds.length === 0 ? (
               <p className="text-sm text-center text-gray-500">No rounds available for this selection.</p>
             ) : (
@@ -399,7 +408,6 @@ export default function App() {
                   )}
                 </div>
 
-                {/* compact nav */}
                 <div className="flex justify-between items-center mt-3">
                   <button
                     onClick={prevRound}
