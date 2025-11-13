@@ -85,3 +85,8 @@
 .refresh-button:hover {
   background-color: #1e40af;
 }
+/* Prevent mobile pull-to-refresh */
+html, body {
+  overscroll-behavior-y: contain;
+  touch-action: pan-x pan-y;
+}
