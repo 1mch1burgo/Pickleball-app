@@ -252,7 +252,7 @@ export default function App() {
                 value={selectedPlayers}
                 onChange={(e) => setSelectedPlayers(e.target.value)}
               >
-                <option value="">Select players</option>
+                <option value="">Select number of players</option>
                 {playersOptions.map((p) => (
                   <option key={p} value={p}>
                     {p}
