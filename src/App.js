@@ -1,10 +1,11 @@
 import React, { useEffect, useState, useRef } from "react";
 import Papa from "papaparse";
+import "./App.css";
 
 /**
  * App.js - Pickleball scheduler UI
- * - CSV expected at public/schedule.csv (header rows include Players, Courts, Round and columns like "1a","1b","1c","1d", "b1"..."b6")
- * - Player numbers in CSV are numeric strings; replaceNumbersWithNames maps them to entered names when available
+ * - CSV expected at public/schedule.csv
+ * - Adds floating "Refresh" button (prevents accidental reload)
  */
 
 export default function App() {
@@ -12,37 +13,50 @@ export default function App() {
   const [playersOptions, setPlayersOptions] = useState([]);
   const [courtsOptions, setCourtsOptions] = useState([]);
   const [roundsOptions, setRoundsOptions] = useState([]);
-
   const [selectedPlayers, setSelectedPlayers] = useState("");
   const [selectedCourts, setSelectedCourts] = useState("");
-  const [selectedNumRounds, setSelectedNumRounds] = useState(""); // number of rounds to show
-
+  const [selectedNumRounds, setSelectedNumRounds] = useState("");
   const [playerNames, setPlayerNames] = useState([]);
   const previousNamesRef = useRef([]);
-  const [filteredRounds, setFilteredRounds] = useState([]); // array of round rows from CSV (order preserved)
+  const [filteredRounds, setFilteredRounds] = useState([]);
   const [editing, setEditing] = useState(true);
   const [currentRoundIndex, setCurrentRoundIndex] = useState(0);
 
+  // 🔄 Refresh button state
   const [showRefresh, setShowRefresh] = useState(true);
-  let lastScrollY = 0;
+  const lastScrollY = useRef(0);
 
-  // touch/swipe state:
-  const touchStartXRef = useRef(null);
-  const touchEndXRef = useRef(null);
+  // 🧱 Prevent pull-to-refresh on mobile
+  useEffect(() => {
+    document.body.style.overscrollBehaviorY = "contain";
+  }, []);
 
-  // load CSV once
+  // 👀 Detect scroll direction
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentY = window.scrollY;
+      if (currentY > lastScrollY.current && currentY > 50) {
+        setShowRefresh(false);
+      } else {
+        setShowRefresh(true);
+      }
+      lastScrollY.current = currentY;
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // Load CSV
   useEffect(() => {
     Papa.parse("/schedule.csv", {
       download: true,
       header: true,
       skipEmptyLines: true,
       complete: (res) => {
-        const raw = res.data.filter((r) => r && r.Round); // keep only valid rows
+        const raw = res.data.filter((r) => r && r.Round);
         setCsvData(raw);
-
-        // unique player counts found in CSV
         const playerSet = [...new Set(raw.map((r) => r.Players).filter(Boolean))];
-        setPlayersOptions(playerSet.sort((a,b)=>parseInt(a)-parseInt(b)));
+        setPlayersOptions(playerSet.sort((a, b) => parseInt(a) - parseInt(b)));
       },
       error: (err) => {
         console.error("CSV load error:", err);
@@ -50,7 +64,7 @@ export default function App() {
     });
   }, []);
 
-  // when selectedPlayers changes, compute courts options (only those available for that player count)
+  // Options setup
   useEffect(() => {
     if (!selectedPlayers) {
       setCourtsOptions([]);
@@ -61,12 +75,10 @@ export default function App() {
     }
     const rowsForPlayers = csvData.filter((r) => r.Players === String(selectedPlayers));
     const courtsSet = [...new Set(rowsForPlayers.map((r) => r.Courts).filter(Boolean))];
-    setCourtsOptions(courtsSet.sort((a,b)=>parseInt(a)-parseInt(b)));
-    // reset downstream selections
+    setCourtsOptions(courtsSet.sort((a, b) => parseInt(a) - parseInt(b)));
     setSelectedCourts("");
     setRoundsOptions([]);
     setSelectedNumRounds("");
-    // ensure playerNames array sized correctly (preserve existing names where possible)
     const needed = parseInt(selectedPlayers, 10) || 0;
     setPlayerNames((cur) => {
       const copy = cur.slice(0, needed);
@@ -75,7 +87,6 @@ export default function App() {
     });
   }, [selectedPlayers, csvData]);
 
-  // when selectedCourts changes, set rounds options (we want number choices 1..maxRoundsAvailable)
   useEffect(() => {
     if (!selectedPlayers || !selectedCourts) {
       setRoundsOptions([]);
@@ -85,34 +96,13 @@ export default function App() {
     const rows = csvData.filter(
       (r) => r.Players === String(selectedPlayers) && r.Courts === String(selectedCourts)
     );
-    // rows are ordered as in CSV; number of available rounds is rows.length
     const max = rows.length;
-    const opts = Array.from({ length: max }, (_, i) => String(i + 1)); // "1","2",...
+    const opts = Array.from({ length: max }, (_, i) => String(i + 1));
     setRoundsOptions(opts);
     setSelectedNumRounds("");
   }, [selectedCourts, selectedPlayers, csvData]);
 
-  // scroll handler for hiding/showing refresh button
-  useEffect(() => {
-    const handleScroll = () => {
-      const currentY = window.scrollY;
-      if (currentY > lastScrollY && currentY > 50) {
-        setShowRefresh(false);
-      } else {
-        setShowRefresh(true);
-      }
-      lastScrollY = currentY;
-    };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  // prevent accidental pull-to-refresh
-  useEffect(() => {
-    document.body.style.overscrollBehaviorY = "contain";
-  }, []);
-
-  // Helper: extract matches from a CSV row object
+  // Helpers
   const extractMatches = (row) => {
     const keys = Object.keys(row);
     const courtNums = new Set();
@@ -209,6 +199,9 @@ export default function App() {
     if (currentRoundIndex > 0) setCurrentRoundIndex((i) => i - 1);
   };
 
+  const touchStartXRef = useRef(null);
+  const touchEndXRef = useRef(null);
+
   const onTouchStart = (e) => {
     touchStartXRef.current = e.touches?.[0]?.clientX ?? null;
   };
@@ -231,23 +224,19 @@ export default function App() {
     touchEndXRef.current = null;
   };
 
-  const maxPlayerCount = parseInt(selectedPlayers || 0, 10);
-
-  // 🔄 Refresh button handler
   const handleRefresh = () => {
-    if (window.confirm("Start a new session? All current data will be cleared.")) {
+    if (window.confirm("Start new session? All current data will be cleared.")) {
       window.location.reload();
     }
   };
 
+  const maxPlayerCount = parseInt(selectedPlayers || 0, 10);
+
   return (
-    <div className="min-h-screen bg-gray-100 py-3 px-3">
-      {/* 🔄 Refresh button */}
+    <div className="min-h-screen bg-gray-100 py-3 px-3 app-container">
+      {/* 🔄 Refresh Button */}
       {showRefresh && (
-        <button
-          className="fixed top-3 right-3 z-50 bg-blue-600 text-white px-4 py-2 rounded-full text-sm font-semibold shadow"
-          onClick={handleRefresh}
-        >
+        <button className="refresh-button" onClick={handleRefresh}>
           🔄 Refresh
         </button>
       )}
@@ -260,10 +249,8 @@ export default function App() {
       >
         <h1 className="text-center text-xl font-bold mb-2">🏓 Pickleball Scheduler</h1>
 
-        {/* EDITING MODE */}
         {editing ? (
           <>
-            {/* Players dropdown */}
             <div className="mb-3">
               <label className="text-xs text-gray-600">Players</label>
               <select
@@ -273,12 +260,13 @@ export default function App() {
               >
                 <option value="">Select number of players</option>
                 {playersOptions.map((p) => (
-                  <option key={p} value={p}>{p}</option>
+                  <option key={p} value={p}>
+                    {p}
+                  </option>
                 ))}
               </select>
             </div>
 
-            {/* Courts dropdown */}
             {courtsOptions.length > 0 && (
               <div className="mb-3">
                 <label className="text-xs text-gray-600">Courts</label>
@@ -289,13 +277,14 @@ export default function App() {
                 >
                   <option value="">Select courts</option>
                   {courtsOptions.map((c) => (
-                    <option key={c} value={c}>{c}</option>
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
                   ))}
                 </select>
               </div>
             )}
 
-            {/* Rounds dropdown */}
             {roundsOptions.length > 0 && (
               <div className="mb-3">
                 <label className="text-xs text-gray-600">Number of Rounds to show</label>
@@ -306,13 +295,14 @@ export default function App() {
                 >
                   <option value="">Select rounds</option>
                   {roundsOptions.map((r) => (
-                    <option key={r} value={r}>{r}</option>
+                    <option key={r} value={r}>
+                      {r}
+                    </option>
                   ))}
                 </select>
               </div>
             )}
 
-            {/* Player list */}
             {selectedPlayers && (
               <div className="mb-3">
                 <label className="text-xs text-gray-600">Player names (scroll)</label>
@@ -324,7 +314,6 @@ export default function App() {
                         className="flex-1 p-1 border rounded text-sm"
                         value={playerNames[i] || ""}
                         onChange={(e) => handleNameChange(i, e.target.value)}
-                        placeholder=""
                       />
                     </div>
                   ))}
@@ -332,7 +321,6 @@ export default function App() {
               </div>
             )}
 
-            {/* Randomize & Undo */}
             <div className="flex gap-2 mb-3">
               <button
                 className="flex-1 bg-yellow-500 text-white p-2 rounded text-sm"
@@ -350,7 +338,6 @@ export default function App() {
               </button>
             </div>
 
-            {/* Generate button */}
             <button
               onClick={() => {
                 buildFilteredRounds();
@@ -363,7 +350,6 @@ export default function App() {
             </button>
           </>
         ) : (
-          /* VIEW MODE */
           <>
             <div className="flex justify-between items-start mb-2">
               <div className="text-xs text-gray-600">
@@ -380,22 +366,30 @@ export default function App() {
             </div>
 
             {filteredRounds.length === 0 ? (
-              <p className="text-sm text-center text-gray-500">No rounds available for this selection.</p>
+              <p className="text-sm text-center text-gray-500">
+                No rounds available for this selection.
+              </p>
             ) : (
               <>
                 <div className="mb-2 text-center">
                   <div className="text-lg text-gray-600">Round</div>
-                  <div className="text-lg font-semibold">{filteredRounds[currentRoundIndex].roundLabel}</div>
+                  <div className="text-lg font-semibold">
+                    {filteredRounds[currentRoundIndex].roundLabel}
+                  </div>
                 </div>
 
                 <div>
                   {filteredRounds[currentRoundIndex].matches.map((m, idx) => (
                     <div key={idx} className="bg-blue-50 rounded-lg p-3 mb-3 border">
-                      <div className="text-center text-lg text-gray-500">Court {m.court}</div>
+                      <div className="text-center text-lg text-gray-500">
+                        Court {m.court}
+                      </div>
                       <div className="mt-1 text-center text-md font-semibold">
-                        <div>{m.team1.map(replaceNumbersWithNames).join("   /   ")}</div>
-                        <div className="text-center text-sm font-semibold mt-1 mb-1">--------</div>
-                        <div>{m.team2.map(replaceNumbersWithNames).join("   /   ")}</div>
+                        <div>{m.team1.map(replaceNumbersWithNames).join(" / ")}</div>
+                        <div className="text-center text-sm font-semibold mt-1 mb-1">
+                          --------
+                        </div>
+                        <div>{m.team2.map(replaceNumbersWithNames).join(" / ")}</div>
                       </div>
                     </div>
                   ))}
@@ -403,7 +397,9 @@ export default function App() {
                   {filteredRounds[currentRoundIndex].byes.length > 0 && (
                     <div className="text-center text-sm text-gray-600 mt-1">
                       <strong>Byes:</strong>{" "}
-                      {filteredRounds[currentRoundIndex].byes.map(replaceNumbersWithNames).join(", ")}
+                      {filteredRounds[currentRoundIndex].byes
+                        .map(replaceNumbersWithNames)
+                        .join(", ")}
                     </div>
                   )}
                 </div>
@@ -412,7 +408,9 @@ export default function App() {
                   <button
                     onClick={prevRound}
                     disabled={currentRoundIndex === 0}
-                    className={`px-3 py-1 rounded text-white text-sm ${currentRoundIndex === 0 ? "bg-gray-300" : "bg-blue-600"}`}
+                    className={`px-3 py-1 rounded text-white text-sm ${
+                      currentRoundIndex === 0 ? "bg-gray-300" : "bg-blue-600"
+                    }`}
                   >
                     ⬅
                   </button>
@@ -422,7 +420,11 @@ export default function App() {
                   <button
                     onClick={nextRound}
                     disabled={currentRoundIndex === filteredRounds.length - 1}
-                    className={`px-3 py-1 rounded text-white text-sm ${currentRoundIndex === filteredRounds.length - 1 ? "bg-gray-300" : "bg-blue-600"}`}
+                    className={`px-3 py-1 rounded text-white text-sm ${
+                      currentRoundIndex === filteredRounds.length - 1
+                        ? "bg-gray-300"
+                        : "bg-blue-600"
+                    }`}
                   >
                     ➡
                   </button>
