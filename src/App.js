@@ -248,7 +248,7 @@ useEffect(() => {
       {/* 🔄 Refresh Button */}
       {showRefresh && (
         <button className="refresh-button" onClick={handleRefresh}>
-          🔄 Refreshii
+          🔄 Refresh
         </button>
       )}
 
@@ -262,13 +262,7 @@ useEffect(() => {
   <div className="header-title">
     🏓 Pickleball Scheduler
   </div>
-  <button
-    className={`refresh-button ${showRefresh ? "" : "hidden"}`}
-    onClick={() => window.location.reload()}
-  >
-    🔄 Refresh
-  </button>
-</div>
+
 
         {editing ? (
           <>
