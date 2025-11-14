@@ -17,7 +17,7 @@ export default function App() {
   const [editing, setEditing] = useState(true);
   const [currentRoundIndex, setCurrentRoundIndex] = useState(0);
 
-  const [showRefresh, setShowRefresh] = useState(true); // Single Refresh button state
+  const [showRefresh] = useState(true); // Single Refresh button state
 
   // touch/swipe state
   const touchStartXRef = useRef(null);
