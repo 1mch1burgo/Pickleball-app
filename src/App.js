@@ -167,8 +167,9 @@ const renderMatrix = () => {
   const names = playerNames.map((p, i) => p || String(i + 1));
   const n = names.length;
 
-  // Initialize matrix and byes
-  const matrix = Array.from({ length: n }, () => Array(n).fill(0));
+  // Initialize matrices
+  const teammateMatrix = Array.from({ length: n }, () => Array(n).fill(0)); // for blue highlight
+  const courtMatrix = Array.from({ length: n }, () => Array(n).fill(0)); // for counts
   const byesCount = Array(n).fill(0);
 
   filteredRounds.forEach((round) => {
@@ -178,49 +179,74 @@ const renderMatrix = () => {
       if (idx >= 0 && idx < n) byesCount[idx]++;
     });
 
-    // Count teammates only (a+b, c+d)
+    // Count teammates (a+b, c+d)
     round.matches.forEach((m) => {
       const t1 = m.team1.map((x) => parseInt(x, 10) - 1);
       const t2 = m.team2.map((x) => parseInt(x, 10) - 1);
+
+      // Teammates for blue highlight
       if (t1[0] >= 0 && t1[1] >= 0) {
-        matrix[t1[0]][t1[1]]++;
-        matrix[t1[1]][t1[0]]++;
+        teammateMatrix[t1[0]][t1[1]]++;
+        teammateMatrix[t1[1]][t1[0]]++;
       }
       if (t2[0] >= 0 && t2[1] >= 0) {
-        matrix[t2[0]][t2[1]]++;
-        matrix[t2[1]][t2[0]]++;
+        teammateMatrix[t2[0]][t2[1]]++;
+        teammateMatrix[t2[1]][t2[0]]++;
+      }
+
+      // Count all courtmates for numbers (a+b+c+d combinations)
+      const allPlayers = [...t1, ...t2];
+      for (let i = 0; i < allPlayers.length; i++) {
+        for (let j = i + 1; j < allPlayers.length; j++) {
+          const p1 = allPlayers[i];
+          const p2 = allPlayers[j];
+          if (p1 >= 0 && p2 >= 0) {
+            courtMatrix[p1][p2]++;
+            courtMatrix[p2][p1]++;
+          }
+        }
       }
     });
   });
 
   return (
-    <div className="overflow-auto">
-      <table className="border-collapse border border-gray-400 text-xs">
+    <div className="overflow-auto max-h-[500px]">
+      <table className="border-collapse border border-gray-400 text-xs table-auto">
         <thead>
           <tr>
-            <th className="border px-1 py-1 bg-gray-100 sticky top-0">Player</th>
+            <th className="border px-1 py-1 bg-gray-200 sticky top-0 left-0 z-10">Player</th>
             {names.map((n, i) => (
-              <th key={i} className="border px-1 py-1 bg-gray-100 sticky top-0">{n}</th>
+              <th
+                key={i}
+                className="border px-1 py-1 bg-gray-200 sticky top-0 z-5"
+              >
+                {n}
+              </th>
             ))}
-            <th className="border px-1 py-1 bg-gray-100 sticky top-0">Byes</th>
-            <th className="border px-1 py-1 bg-gray-100 sticky top-0">Not played with</th>
+            <th className="border px-1 py-1 bg-gray-200 sticky top-0 z-5">Byes</th>
+            <th className="border px-1 py-1 bg-gray-200 sticky top-0 z-5">Not played with</th>
           </tr>
         </thead>
         <tbody>
           {names.map((rowName, i) => (
             <tr key={i}>
-              <td className="border px-1 py-1 font-semibold">{rowName}</td>
-              {matrix[i].map((val, j) => (
-                <td
-                  key={j}
-                  className={`border px-1 py-1 text-center ${i !== j && val > 0 ? "bg-blue-300" : ""}`}
-                >
-                  {i === j ? "" : val > 0 ? val : ""}
-                </td>
-              ))}
+              <td className="border px-1 py-1 font-semibold bg-gray-200 sticky left-0 z-5">{rowName}</td>
+              {names.map((_, j) => {
+                const isDiagonal = i === j;
+                const bgColor = isDiagonal
+                  ? "bg-gray-300"
+                  : teammateMatrix[i][j] > 0
+                  ? "bg-blue-300"
+                  : "";
+                return (
+                  <td key={j} className={`border px-1 py-1 text-center ${bgColor}`}>
+                    {isDiagonal ? "" : courtMatrix[i][j] > 0 ? courtMatrix[i][j] : ""}
+                  </td>
+                );
+              })}
               <td className="border px-1 py-1 text-center">{byesCount[i]}</td>
               <td className="border px-1 py-1 text-center">
-                {matrix[i].filter((v, j) => j !== i && v === 0).length}
+                {courtMatrix[i].filter((v, j) => i !== j && v === 0).length}
               </td>
             </tr>
           ))}
