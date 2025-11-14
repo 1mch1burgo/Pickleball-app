@@ -160,14 +160,14 @@ export default function App() {
     touchEndXRef.current = null;
   };
 
- // Build teammate matrix
+// Build teammate matrix
 const renderMatrix = () => {
   if (!filteredRounds.length) return null;
 
   const names = playerNames.map((p, i) => p || String(i + 1));
   const n = names.length;
 
-  // Initialize matrix
+  // Initialize matrix and byes
   const matrix = Array.from({ length: n }, () => Array(n).fill(0));
   const byesCount = Array(n).fill(0);
 
@@ -178,7 +178,7 @@ const renderMatrix = () => {
       if (idx >= 0 && idx < n) byesCount[idx]++;
     });
 
-    // Count teammates only
+    // Count teammates only (a+b, c+d)
     round.matches.forEach((m) => {
       const t1 = m.team1.map((x) => parseInt(x, 10) - 1);
       const t2 = m.team2.map((x) => parseInt(x, 10) - 1);
@@ -229,42 +229,6 @@ const renderMatrix = () => {
     </div>
   );
 };
-    return (
-      <div className="overflow-auto">
-        <table className="border-collapse border border-gray-400 text-xs">
-          <thead>
-            <tr>
-              <th className="border px-1 py-1 bg-gray-100 sticky top-0">Player</th>
-              {names.map((n, i) => (
-                <th key={i} className="border px-1 py-1 bg-gray-100 sticky top-0">{n}</th>
-              ))}
-              <th className="border px-1 py-1 bg-gray-100 sticky top-0">Byes</th>
-              <th className="border px-1 py-1 bg-gray-100 sticky top-0">Not played with</th>
-            </tr>
-          </thead>
-          <tbody>
-            {names.map((rowName, i) => (
-              <tr key={i}>
-                <td className="border px-1 py-1 font-semibold">{rowName}</td>
-                {matrix[i].map((val, j) => (
-                  <td
-                    key={j}
-                    className={`border px-1 py-1 text-center ${val > 0 ? "bg-blue-300" : ""}`}
-                  >
-                    {val > 0 ? val : ""}
-                  </td>
-                ))}
-                <td className="border px-1 py-1 text-center">{byesCount[i]}</td>
-                <td className="border px-1 py-1 text-center">
-                  {matrix[i].filter((v) => v === 0 && v !== i).length}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    );
-  };
 
   const genDisabled = !selectedPlayers || !selectedCourts || !selectedNumRounds;
 
