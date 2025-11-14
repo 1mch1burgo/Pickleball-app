@@ -1,3 +1,4 @@
+// App.js
 import React, { useEffect, useState, useRef } from "react";
 import Papa from "papaparse";
 
@@ -15,15 +16,12 @@ export default function App() {
   const previousNamesRef = useRef([]);
   const [filteredRounds, setFilteredRounds] = useState([]);
   const [currentRoundIndex, setCurrentRoundIndex] = useState(0);
-
-  const [view, setView] = useState("input"); // "input" | "schedule" | "matrix"
+  const [view, setView] = useState("input"); // input | schedule | matrix
 
   const touchStartXRef = useRef(null);
   const touchEndXRef = useRef(null);
 
-  const maxPlayerCount = parseInt(selectedPlayers || 0, 10);
-
-  // load CSV
+  // Load CSV
   useEffect(() => {
     Papa.parse("/schedule.csv", {
       download: true,
@@ -32,16 +30,14 @@ export default function App() {
       complete: (res) => {
         const raw = res.data.filter((r) => r && r.Round);
         setCsvData(raw);
-        const playerSet = [
-          ...new Set(raw.map((r) => r.Players).filter(Boolean)),
-        ];
+        const playerSet = [...new Set(raw.map((r) => r.Players).filter(Boolean))];
         setPlayersOptions(playerSet.sort((a, b) => parseInt(a) - parseInt(b)));
       },
       error: (err) => console.error("CSV load error:", err),
     });
   }, []);
 
-  // Prevent mobile pull-to-refresh / overscroll
+  // Prevent mobile overscroll / pull-to-refresh
   useEffect(() => {
     const prev = document.documentElement.style.overscrollBehavior;
     document.documentElement.style.overscrollBehavior = "none";
@@ -52,24 +48,10 @@ export default function App() {
 
   // Compute courts options
   useEffect(() => {
-    if (!selectedPlayers) {
-      setCourtsOptions([]);
-      setSelectedCourts("");
-      setRoundsOptions([]);
-      setSelectedNumRounds("");
-      return;
-    }
-    const rowsForPlayers = csvData.filter(
-      (r) => r.Players === String(selectedPlayers)
-    );
-    const courtsSet = [
-      ...new Set(rowsForPlayers.map((r) => r.Courts).filter(Boolean)),
-    ];
+    if (!selectedPlayers) return;
+    const rowsForPlayers = csvData.filter((r) => r.Players === String(selectedPlayers));
+    const courtsSet = [...new Set(rowsForPlayers.map((r) => r.Courts).filter(Boolean))];
     setCourtsOptions(courtsSet.sort((a, b) => parseInt(a) - parseInt(b)));
-
-    setSelectedCourts("");
-    setRoundsOptions([]);
-    setSelectedNumRounds("");
 
     const needed = parseInt(selectedPlayers, 10) || 0;
     setPlayerNames((cur) => {
@@ -81,20 +63,16 @@ export default function App() {
 
   // Compute rounds options
   useEffect(() => {
-    if (!selectedPlayers || !selectedCourts) {
-      setRoundsOptions([]);
-      setSelectedNumRounds("");
-      return;
-    }
+    if (!selectedPlayers || !selectedCourts) return;
     const rows = csvData.filter(
       (r) => r.Players === String(selectedPlayers) && r.Courts === String(selectedCourts)
     );
     const max = rows.length;
     const opts = Array.from({ length: max }, (_, i) => String(i + 1));
     setRoundsOptions(opts);
-    setSelectedNumRounds("");
-  }, [selectedCourts, selectedPlayers, csvData]);
+  }, [selectedPlayers, selectedCourts, csvData]);
 
+  // Extract matches and byes
   const extractMatches = (row) => {
     const keys = Object.keys(row);
     const courtNums = new Set();
@@ -139,6 +117,7 @@ export default function App() {
     }));
     setFilteredRounds(rounds);
     setCurrentRoundIndex(0);
+    setView("schedule");
   };
 
   const replaceNumbersWithNames = (numStr) => {
@@ -148,29 +127,13 @@ export default function App() {
     return name && name.trim() !== "" ? name.trim() : String(idx);
   };
 
-  const handleNameChange = (i, v) => {
-    setPlayerNames((cur) => {
-      const copy = cur.slice();
-      copy[i] = v;
-      return copy;
-    });
-  };
-
-  const randomizePlayers = () => {
-    previousNamesRef.current = playerNames.slice();
-    const filled = playerNames.filter((p) => p && p.trim() !== "");
-    const blanks = playerNames.filter((p) => !p || p.trim() === "");
-    for (let i = filled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [filled[i], filled[j]] = [filled[j], filled[i]];
+  const handleRefresh = () => {
+    if (window.confirm("Do you really want to refresh? This will lose any unsaved data.")) {
+      window.location.reload();
     }
-    setPlayerNames([...filled, ...blanks]);
   };
 
-  const undoRandomize = () => {
-    if (previousNamesRef.current && previousNamesRef.current.length)
-      setPlayerNames(previousNamesRef.current.slice());
-  };
+  const maxPlayerCount = parseInt(selectedPlayers || 0, 10);
 
   const nextRound = () => {
     if (currentRoundIndex < filteredRounds.length - 1) setCurrentRoundIndex((i) => i + 1);
@@ -197,54 +160,104 @@ export default function App() {
     touchEndXRef.current = null;
   };
 
-  const handleRefresh = () => {
-    const ok = window.confirm(
-      "Do you really want to refresh? This will lose any unsaved player names or generated schedule."
-    );
-    if (ok) window.location.reload();
-  };
+ // Build teammate matrix
+const renderMatrix = () => {
+  if (!filteredRounds.length) return null;
 
-  // generate button disabled
-  const genDisabled = !selectedPlayers || !selectedCourts || !selectedNumRounds;
+  const names = playerNames.map((p, i) => p || String(i + 1));
+  const n = names.length;
 
-  // build matrix data
-  const buildMatrix = () => {
-    const n = maxPlayerCount;
-    const mat = Array.from({ length: n }, () => Array(n).fill(0));
-    filteredRounds.forEach((round) => {
-      round.matches.forEach((m) => {
-        const t1 = m.team1.map(Number);
-        const t2 = m.team2.map(Number);
-        [...t1, ...t2].forEach((p) => {
-          [...t1, ...t2].forEach((q) => {
-            if (p !== q) mat[p - 1][q - 1]++;
-          });
-        });
-      });
+  // Initialize matrix
+  const matrix = Array.from({ length: n }, () => Array(n).fill(0));
+  const byesCount = Array(n).fill(0);
+
+  filteredRounds.forEach((round) => {
+    // Count byes
+    round.byes.forEach((b) => {
+      const idx = parseInt(b, 10) - 1;
+      if (idx >= 0 && idx < n) byesCount[idx]++;
     });
-    return mat;
-  };
 
-  const renderMatrix = () => {
-    const mat = buildMatrix();
+    // Count teammates only
+    round.matches.forEach((m) => {
+      const t1 = m.team1.map((x) => parseInt(x, 10) - 1);
+      const t2 = m.team2.map((x) => parseInt(x, 10) - 1);
+      if (t1[0] >= 0 && t1[1] >= 0) {
+        matrix[t1[0]][t1[1]]++;
+        matrix[t1[1]][t1[0]]++;
+      }
+      if (t2[0] >= 0 && t2[1] >= 0) {
+        matrix[t2[0]][t2[1]]++;
+        matrix[t2[1]][t2[0]]++;
+      }
+    });
+  });
+
+  return (
+    <div className="overflow-auto">
+      <table className="border-collapse border border-gray-400 text-xs">
+        <thead>
+          <tr>
+            <th className="border px-1 py-1 bg-gray-100 sticky top-0">Player</th>
+            {names.map((n, i) => (
+              <th key={i} className="border px-1 py-1 bg-gray-100 sticky top-0">{n}</th>
+            ))}
+            <th className="border px-1 py-1 bg-gray-100 sticky top-0">Byes</th>
+            <th className="border px-1 py-1 bg-gray-100 sticky top-0">Not played with</th>
+          </tr>
+        </thead>
+        <tbody>
+          {names.map((rowName, i) => (
+            <tr key={i}>
+              <td className="border px-1 py-1 font-semibold">{rowName}</td>
+              {matrix[i].map((val, j) => (
+                <td
+                  key={j}
+                  className={`border px-1 py-1 text-center ${i !== j && val > 0 ? "bg-blue-300" : ""}`}
+                >
+                  {i === j ? "" : val > 0 ? val : ""}
+                </td>
+              ))}
+              <td className="border px-1 py-1 text-center">{byesCount[i]}</td>
+              <td className="border px-1 py-1 text-center">
+                {matrix[i].filter((v, j) => j !== i && v === 0).length}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
     return (
-      <div className="overflow-auto border rounded p-2 bg-gray-50">
-        <table className="table-auto border-collapse">
+      <div className="overflow-auto">
+        <table className="border-collapse border border-gray-400 text-xs">
           <thead>
             <tr>
-              <th className="border px-1 py-1">#</th>
-              {playerNames.map((p, i) => (
-                <th key={i} className="border px-1 py-1">{replaceNumbersWithNames(String(i + 1))}</th>
+              <th className="border px-1 py-1 bg-gray-100 sticky top-0">Player</th>
+              {names.map((n, i) => (
+                <th key={i} className="border px-1 py-1 bg-gray-100 sticky top-0">{n}</th>
               ))}
+              <th className="border px-1 py-1 bg-gray-100 sticky top-0">Byes</th>
+              <th className="border px-1 py-1 bg-gray-100 sticky top-0">Not played with</th>
             </tr>
           </thead>
           <tbody>
-            {mat.map((row, i) => (
+            {names.map((rowName, i) => (
               <tr key={i}>
-                <td className="border px-1 py-1 font-bold">{replaceNumbersWithNames(String(i + 1))}</td>
-                {row.map((v, j) => (
-                  <td key={j} className={`border px-1 py-1 text-center ${v > 0 ? "bg-blue-200" : ""}`}>{v}</td>
+                <td className="border px-1 py-1 font-semibold">{rowName}</td>
+                {matrix[i].map((val, j) => (
+                  <td
+                    key={j}
+                    className={`border px-1 py-1 text-center ${val > 0 ? "bg-blue-300" : ""}`}
+                  >
+                    {val > 0 ? val : ""}
+                  </td>
                 ))}
+                <td className="border px-1 py-1 text-center">{byesCount[i]}</td>
+                <td className="border px-1 py-1 text-center">
+                  {matrix[i].filter((v) => v === 0 && v !== i).length}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -252,6 +265,8 @@ export default function App() {
       </div>
     );
   };
+
+  const genDisabled = !selectedPlayers || !selectedCourts || !selectedNumRounds;
 
   return (
     <div className="min-h-screen bg-gray-100 py-3 px-3 relative">
@@ -300,7 +315,7 @@ export default function App() {
             {/* Rounds dropdown */}
             {roundsOptions.length > 0 && (
               <div className="mb-3">
-                <label className="text-xs text-gray-600">Number of Rounds</label>
+                <label className="text-xs text-gray-600">Number of Rounds to show</label>
                 <select
                   className="w-full border rounded p-2 mt-1 text-sm"
                   value={selectedNumRounds}
@@ -314,48 +329,10 @@ export default function App() {
               </div>
             )}
 
-            {/* Player list */}
-            {selectedPlayers && (
-              <div className="mb-3">
-                <label className="text-xs text-gray-600">Player names</label>
-                <div className="border rounded h-44 overflow-y-auto p-2 bg-blue-50 mt-1">
-                  {Array.from({ length: maxPlayerCount }).map((_, i) => (
-                    <div key={i} className="flex gap-2 items-center mb-1">
-                      <div className="w-6 text-xs text-gray-500">{i + 1}</div>
-                      <input
-                        className="flex-1 p-1 border rounded text-sm"
-                        value={playerNames[i] || ""}
-                        onChange={(e) => handleNameChange(i, e.target.value)}
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Randomize / Undo */}
-            <div className="flex gap-2 mb-3">
-              <button
-                onClick={randomizePlayers}
-                disabled={!selectedPlayers}
-                className={`flex-1 p-2 rounded text-sm ${!selectedPlayers ? "bg-gray-300 text-white" : "bg-yellow-500 text-white"}`}
-              >
-                🎲 Randomize
-              </button>
-              <button
-                onClick={undoRandomize}
-                disabled={!previousNamesRef.current.length}
-                className={`flex-1 p-2 rounded text-sm ${!previousNamesRef.current.length ? "bg-gray-300 text-white" : "bg-gray-400 text-white"}`}
-              >
-                ↩ Undo
-              </button>
-            </div>
-
-            {/* Generate */}
             <button
-              onClick={() => { buildFilteredRounds(); setView("schedule"); }}
+              onClick={buildFilteredRounds}
+              className={`${genDisabled ? "w-full bg-gray-400 text-white p-2 rounded text-sm cursor-not-allowed" : "w-full bg-blue-600 text-white p-2 rounded text-sm"}`}
               disabled={genDisabled}
-              className={`w-full p-2 rounded text-sm ${genDisabled ? "bg-gray-400 text-white cursor-not-allowed" : "bg-blue-600 text-white"}`}
             >
               Generate Schedule
             </button>
@@ -364,19 +341,29 @@ export default function App() {
 
         {view === "schedule" && (
           <>
+            {/* Top summary + buttons */}
             <div className="flex justify-between items-start mb-2">
-              <div className="flex items-start gap-2">
-                <button className="text-xs bg-red-500 text-white px-2 py-1 rounded shadow" onClick={handleRefresh}>🔄 Refresh</button>
-                <div className="text-xs text-gray-600">
-                  <div>Players: <strong>{selectedPlayers}</strong></div>
-                  <div>Courts: <strong>{selectedCourts}</strong></div>
-                  <div>Rounds: <strong>{selectedNumRounds}</strong></div>
-                </div>
+              <div className="flex items-start gap-3">
+                <button
+                  className="text-xs bg-red-500 text-white px-2 py-1 rounded shadow"
+                  onClick={handleRefresh}
+                >
+                  🔄 Refresh
+                </button>
+                <button
+                  className="text-xs text-blue-600 underline"
+                  onClick={() => setView("matrix")}
+                >
+                  📊 Matrix
+                </button>
               </div>
-              <div className="flex flex-col gap-1 items-end">
-                <button className="text-xs text-blue-600 underline" onClick={() => setView("input")}>✏️ Edit</button>
-                <button className="text-xs text-blue-600 underline" onClick={() => setView("matrix")}>📊 Show Matrix</button>
-              </div>
+
+              <button
+                className="text-xs text-blue-600 underline"
+                onClick={() => setView("input")}
+              >
+                ✏️ Edit
+              </button>
             </div>
 
             {/* Round display */}
@@ -386,7 +373,9 @@ export default function App() {
               <>
                 <div className="mb-2 text-center">
                   <div className="text-lg text-gray-600">Round</div>
-                  <div className="text-lg font-semibold">{filteredRounds[currentRoundIndex].roundLabel}</div>
+                  <div className="text-lg font-semibold">
+                    {filteredRounds[currentRoundIndex].roundLabel}
+                  </div>
                 </div>
 
                 <div>
@@ -394,24 +383,32 @@ export default function App() {
                     <div key={idx} className="bg-blue-50 rounded-lg p-3 mb-3 border">
                       <div className="text-center text-lg text-gray-500">Court {m.court}</div>
                       <div className="mt-1 text-center text-md font-semibold">
-                        <div>{m.team1.map(replaceNumbersWithNames).join(" / ")}</div>
-                        <div className="text-sm font-semibold mt-1 mb-1">--------</div>
-                        <div>{m.team2.map(replaceNumbersWithNames).join(" / ")}</div>
+                        <div>{m.team1.map(replaceNumbersWithNames).join("   /   ")}</div>
+                        <div className="text-center text-sm font-semibold mt-1 mb-1">--------</div>
+                        <div>{m.team2.map(replaceNumbersWithNames).join("   /   ")}</div>
                       </div>
                     </div>
                   ))}
-
                   {filteredRounds[currentRoundIndex].byes.length > 0 && (
                     <div className="text-center text-sm text-gray-600 mt-1">
-                      <strong>Byes:</strong> {filteredRounds[currentRoundIndex].byes.map(replaceNumbersWithNames).join(", ")}
+                      <strong>Byes:</strong>{" "}
+                      {filteredRounds[currentRoundIndex].byes.map(replaceNumbersWithNames).join(", ")}
                     </div>
                   )}
                 </div>
 
                 <div className="flex justify-between items-center mt-3">
-                  <button onClick={prevRound} disabled={currentRoundIndex === 0} className={`px-3 py-1 rounded text-white text-sm ${currentRoundIndex===0 ? "bg-gray-300" : "bg-blue-600"}`}>⬅</button>
-                  <div className="text-xs text-gray-600">{currentRoundIndex+1} / {filteredRounds.length}</div>
-                  <button onClick={nextRound} disabled={currentRoundIndex===filteredRounds.length-1} className={`px-3 py-1 rounded text-white text-sm ${currentRoundIndex===filteredRounds.length-1 ? "bg-gray-300" : "bg-blue-600"}`}>➡</button>
+                  <button
+                    onClick={prevRound}
+                    disabled={currentRoundIndex === 0}
+                    className={`px-3 py-1 rounded text-white text-sm ${currentRoundIndex === 0 ? "bg-gray-300" : "bg-blue-600"}`}
+                  >⬅</button>
+                  <div className="text-xs text-gray-600">{currentRoundIndex + 1} / {filteredRounds.length}</div>
+                  <button
+                    onClick={nextRound}
+                    disabled={currentRoundIndex === filteredRounds.length - 1}
+                    className={`px-3 py-1 rounded text-white text-sm ${currentRoundIndex === filteredRounds.length - 1 ? "bg-gray-300" : "bg-blue-600"}`}
+                  >➡</button>
                 </div>
               </>
             )}
@@ -421,7 +418,12 @@ export default function App() {
         {view === "matrix" && (
           <>
             {renderMatrix()}
-            <button onClick={() => setView("schedule")} className="mt-2 w-full bg-blue-600 text-white p-2 rounded text-sm">⬅ Return to Schedule</button>
+            <button
+              onClick={() => setView("schedule")}
+              className="mt-2 w-full bg-blue-600 text-white p-2 rounded text-sm"
+            >
+              ⬅ Return to Schedule
+            </button>
           </>
         )}
       </div>
