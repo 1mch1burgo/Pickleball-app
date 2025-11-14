@@ -43,32 +43,16 @@ export default function App() {
   }, []);
 
   // Prevent mobile pull-to-refresh / overscroll behavior and warn before unload
-  useEffect(() => {
-    const prev = document.documentElement.style.overscrollBehavior;
-    document.documentElement.style.overscrollBehavior = "none";
+ useEffect(() => {
+  // Disable pull-to-refresh on mobile
+  const prev = document.documentElement.style.overscrollBehavior;
+  document.documentElement.style.overscrollBehavior = "none";
 
-    const onBeforeUnload = (e) => {
-      // only prompt if there is data that would be lost
-      const hasPlayerNames = playerNames.some((p) => p && p.trim() !== "");
-      const hasFilteredRounds = filteredRounds && filteredRounds.length > 0;
-      if (hasPlayerNames || hasFilteredRounds) {
-        // standard behavior: set returnValue to show prompt in most browsers
-        e.preventDefault();
-        e.returnValue =
-          "You have an unsaved schedule — leaving will lose changes. Are you sure?";
-        return e.returnValue;
-      }
-      // otherwise no prompt
-      return undefined;
-    };
-
-    window.addEventListener("beforeunload", onBeforeUnload);
-
-    return () => {
-      document.documentElement.style.overscrollBehavior = prev || "";
-      window.removeEventListener("beforeunload", onBeforeUnload);
-    };
-  }, [playerNames, filteredRounds]);
+  return () => {
+    // Restore on exit
+    document.documentElement.style.overscrollBehavior = prev;
+  };
+}, []);
 
   // Compute courts options
   useEffect(() => {
