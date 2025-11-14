@@ -266,7 +266,14 @@ const renderMatrix = () => {
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
       >
-        <h1 className="text-center text-xl font-bold mb-2">🏓 Pickleball Scheduler</h1>
+       <h1 className="text-center text-xl font-bold mb-2">🏓 Pickleball Scheduler</h1>
+
+{/* Summary of current selection */}
+{selectedPlayers && selectedCourts && selectedNumRounds && (
+  <div className="text-center text-sm text-gray-600 mb-3">
+    Players: <strong>{selectedPlayers}</strong> | Courts: <strong>{selectedCourts}</strong> | Rounds: <strong>{selectedNumRounds}</strong>
+  </div>
+)}
 
         {view === "input" && (
           <>
