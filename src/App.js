@@ -1,3 +1,4 @@
+// App.js
 import React, { useEffect, useState, useRef } from "react";
 import Papa from "papaparse";
 
@@ -17,7 +18,7 @@ export default function App() {
   const [editing, setEditing] = useState(true);
   const [currentRoundIndex, setCurrentRoundIndex] = useState(0);
 
-  const [showRefresh] = useState(true); // Single Refresh button state
+  const [showRefresh] = useState(true); // keep the toggle but no setter needed
 
   // touch/swipe state
   const touchStartXRef = useRef(null);
@@ -32,12 +33,42 @@ export default function App() {
       complete: (res) => {
         const raw = res.data.filter((r) => r && r.Round);
         setCsvData(raw);
-        const playerSet = [...new Set(raw.map((r) => r.Players).filter(Boolean))];
+        const playerSet = [
+          ...new Set(raw.map((r) => r.Players).filter(Boolean)),
+        ];
         setPlayersOptions(playerSet.sort((a, b) => parseInt(a) - parseInt(b)));
       },
       error: (err) => console.error("CSV load error:", err),
     });
   }, []);
+
+  // Prevent mobile pull-to-refresh / overscroll behavior and warn before unload
+  useEffect(() => {
+    const prev = document.documentElement.style.overscrollBehavior;
+    document.documentElement.style.overscrollBehavior = "none";
+
+    const onBeforeUnload = (e) => {
+      // only prompt if there is data that would be lost
+      const hasPlayerNames = playerNames.some((p) => p && p.trim() !== "");
+      const hasFilteredRounds = filteredRounds && filteredRounds.length > 0;
+      if (hasPlayerNames || hasFilteredRounds) {
+        // standard behavior: set returnValue to show prompt in most browsers
+        e.preventDefault();
+        e.returnValue =
+          "You have an unsaved schedule — leaving will lose changes. Are you sure?";
+        return e.returnValue;
+      }
+      // otherwise no prompt
+      return undefined;
+    };
+
+    window.addEventListener("beforeunload", onBeforeUnload);
+
+    return () => {
+      document.documentElement.style.overscrollBehavior = prev || "";
+      window.removeEventListener("beforeunload", onBeforeUnload);
+    };
+  }, [playerNames, filteredRounds]);
 
   // Compute courts options
   useEffect(() => {
@@ -48,8 +79,12 @@ export default function App() {
       setSelectedNumRounds("");
       return;
     }
-    const rowsForPlayers = csvData.filter((r) => r.Players === String(selectedPlayers));
-    const courtsSet = [...new Set(rowsForPlayers.map((r) => r.Courts).filter(Boolean))];
+    const rowsForPlayers = csvData.filter(
+      (r) => r.Players === String(selectedPlayers)
+    );
+    const courtsSet = [
+      ...new Set(rowsForPlayers.map((r) => r.Courts).filter(Boolean)),
+    ];
     setCourtsOptions(courtsSet.sort((a, b) => parseInt(a) - parseInt(b)));
 
     setSelectedCourts("");
@@ -188,18 +223,21 @@ export default function App() {
 
   const maxPlayerCount = parseInt(selectedPlayers || 0, 10);
 
+  // Generate button disabled state and class
+  const genDisabled = !selectedPlayers || !selectedCourts || !selectedNumRounds;
+
+  const handleRefresh = () => {
+    const ok = window.confirm(
+      "Do you really want to refresh? This will lose any unsaved player names or generated schedule."
+    );
+    if (ok) {
+      // allow refresh (this will of course reload everything)
+      window.location.reload();
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-100 py-3 px-3 relative">
-      {/* Single floating Refresh button */}
-      {showRefresh && (
-        <button
-          className="fixed top-4 right-4 z-50 bg-blue-600 text-white px-3 py-1 rounded shadow"
-          onClick={() => window.location.reload()}
-        >
-          🔄 Refresh
-        </button>
-      )}
-
       <div
         className="mx-auto max-w-sm bg-white rounded-2xl shadow p-3"
         onTouchStart={onTouchStart}
@@ -220,7 +258,9 @@ export default function App() {
               >
                 <option value="">Select number of players</option>
                 {playersOptions.map((p) => (
-                  <option key={p} value={p}>{p}</option>
+                  <option key={p} value={p}>
+                    {p}
+                  </option>
                 ))}
               </select>
             </div>
@@ -236,7 +276,9 @@ export default function App() {
                 >
                   <option value="">Select courts</option>
                   {courtsOptions.map((c) => (
-                    <option key={c} value={c}>{c}</option>
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -253,7 +295,9 @@ export default function App() {
                 >
                   <option value="">Select rounds</option>
                   {roundsOptions.map((r) => (
-                    <option key={r} value={r}>{r}</option>
+                    <option key={r} value={r}>
+                      {r}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -282,14 +326,14 @@ export default function App() {
             {/* Randomize & Undo */}
             <div className="flex gap-2 mb-3">
               <button
-                className="flex-1 bg-yellow-500 text-white p-2 rounded text-sm"
+                className={`flex-1 p-2 rounded text-sm ${!selectedPlayers ? "bg-gray-300 text-white cursor-not-allowed" : "bg-yellow-500 text-white"}`}
                 onClick={randomizePlayers}
                 disabled={!selectedPlayers}
               >
                 🎲 Randomize
               </button>
               <button
-                className="flex-1 bg-gray-400 text-white p-2 rounded text-sm"
+                className={`flex-1 p-2 rounded text-sm ${!previousNamesRef.current.length ? "bg-gray-300 text-white cursor-not-allowed" : "bg-gray-400 text-white"}`}
                 onClick={undoRandomize}
                 disabled={!previousNamesRef.current.length}
               >
@@ -303,21 +347,40 @@ export default function App() {
                 buildFilteredRounds();
                 setEditing(false);
               }}
-              className="w-full bg-blue-600 text-white p-2 rounded text-sm"
-              disabled={!selectedPlayers || !selectedCourts || !selectedNumRounds}
+              className={`${genDisabled ? "w-full bg-gray-400 text-white p-2 rounded text-sm cursor-not-allowed" : "w-full bg-blue-600 text-white p-2 rounded text-sm"}`}
+              disabled={genDisabled}
             >
               Generate Schedule
             </button>
           </>
         ) : (
           <>
-            {/* Top summary + edit */}
+            {/* Top summary + refresh + edit */}
             <div className="flex justify-between items-start mb-2">
-              <div className="text-xs text-gray-600">
-                <div>Players: <strong>{selectedPlayers}</strong></div>
-                <div>Courts: <strong>{selectedCourts}</strong></div>
-                <div>Rounds: <strong>{selectedNumRounds}</strong></div>
+              <div className="flex items-start gap-3">
+                {/* Refresh button placed inside the summary area on the left */}
+                {showRefresh && (
+                  <button
+                    className="text-xs bg-red-500 text-white px-2 py-1 rounded shadow"
+                    onClick={handleRefresh}
+                  >
+                    🔄 Refresh
+                  </button>
+                )}
+
+                <div className="text-xs text-gray-600">
+                  <div>
+                    Players: <strong>{selectedPlayers}</strong>
+                  </div>
+                  <div>
+                    Courts: <strong>{selectedCourts}</strong>
+                  </div>
+                  <div>
+                    Rounds: <strong>{selectedNumRounds}</strong>
+                  </div>
+                </div>
               </div>
+
               <button
                 className="text-xs text-blue-600 underline"
                 onClick={() => setEditing(true)}
@@ -333,16 +396,25 @@ export default function App() {
               <>
                 <div className="mb-2 text-center">
                   <div className="text-lg text-gray-600">Round</div>
-                  <div className="text-lg font-semibold">{filteredRounds[currentRoundIndex].roundLabel}</div>
+                  <div className="text-lg font-semibold">
+                    {filteredRounds[currentRoundIndex].roundLabel}
+                  </div>
                 </div>
 
                 <div>
                   {filteredRounds[currentRoundIndex].matches.map((m, idx) => (
-                    <div key={idx} className="bg-blue-50 rounded-lg p-3 mb-3 border">
-                      <div className="text-center text-lg text-gray-500">Court {m.court}</div>
+                    <div
+                      key={idx}
+                      className="bg-blue-50 rounded-lg p-3 mb-3 border"
+                    >
+                      <div className="text-center text-lg text-gray-500">
+                        Court {m.court}
+                      </div>
                       <div className="mt-1 text-center text-md font-semibold">
                         <div>{m.team1.map(replaceNumbersWithNames).join("   /   ")}</div>
-                        <div className="text-center text-sm font-semibold mt-1 mb-1">--------</div>
+                        <div className="text-center text-sm font-semibold mt-1 mb-1">
+                          --------
+                        </div>
                         <div>{m.team2.map(replaceNumbersWithNames).join("   /   ")}</div>
                       </div>
                     </div>
@@ -351,7 +423,9 @@ export default function App() {
                   {filteredRounds[currentRoundIndex].byes.length > 0 && (
                     <div className="text-center text-sm text-gray-600 mt-1">
                       <strong>Byes:</strong>{" "}
-                      {filteredRounds[currentRoundIndex].byes.map(replaceNumbersWithNames).join(", ")}
+                      {filteredRounds[currentRoundIndex].byes
+                        .map(replaceNumbersWithNames)
+                        .join(", ")}
                     </div>
                   )}
                 </div>
@@ -361,7 +435,9 @@ export default function App() {
                   <button
                     onClick={prevRound}
                     disabled={currentRoundIndex === 0}
-                    className={`px-3 py-1 rounded text-white text-sm ${currentRoundIndex === 0 ? "bg-gray-300" : "bg-blue-600"}`}
+                    className={`px-3 py-1 rounded text-white text-sm ${
+                      currentRoundIndex === 0 ? "bg-gray-300" : "bg-blue-600"
+                    }`}
                   >
                     ⬅
                   </button>
@@ -371,7 +447,11 @@ export default function App() {
                   <button
                     onClick={nextRound}
                     disabled={currentRoundIndex === filteredRounds.length - 1}
-                    className={`px-3 py-1 rounded text-white text-sm ${currentRoundIndex === filteredRounds.length - 1 ? "bg-gray-300" : "bg-blue-600"}`}
+                    className={`px-3 py-1 rounded text-white text-sm ${
+                      currentRoundIndex === filteredRounds.length - 1
+                        ? "bg-gray-300"
+                        : "bg-blue-600"
+                    }`}
                   >
                     ➡
                   </button>
