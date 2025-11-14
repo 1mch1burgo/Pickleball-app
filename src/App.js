@@ -142,237 +142,206 @@ export default function App() {
     if (currentRoundIndex > 0) setCurrentRoundIndex((i) => i - 1);
   };
 
-  const onTouchStart = (e) => {
-    touchStartXRef.current = e.touches?.[0]?.clientX ?? null;
-  };
-  const onTouchMove = (e) => {
-    touchEndXRef.current = e.touches?.[0]?.clientX ?? null;
-  };
+  const onTouchStart = (e) => { touchStartXRef.current = e.touches?.[0]?.clientX ?? null; };
+  const onTouchMove = (e) => { touchEndXRef.current = e.touches?.[0]?.clientX ?? null; };
   const onTouchEnd = () => {
-    const s = touchStartXRef.current;
-    const e = touchEndXRef.current;
+    const s = touchStartXRef.current, e = touchEndXRef.current;
     if (s == null || e == null) return;
     const diff = s - e;
     const threshold = 50;
     if (diff > threshold) nextRound();
     if (diff < -threshold) prevRound();
-    touchStartXRef.current = null;
-    touchEndXRef.current = null;
+    touchStartXRef.current = null; touchEndXRef.current = null;
   };
 
-// Build teammate matrix
-const renderMatrix = () => {
-  if (!filteredRounds.length) return null;
+  // Matrix logic
+  const renderMatrix = () => {
+    if (!filteredRounds.length) return null;
+    const names = playerNames.map((p, i) => p || String(i + 1));
+    const n = names.length;
 
-  const names = playerNames.map((p, i) => p || String(i + 1));
-  const n = names.length;
+    const matrix = Array.from({ length: n }, () => Array(n).fill(0));
+    const byesCount = Array(n).fill(0);
 
-  // Initialize matrices
-  const teammateMatrix = Array.from({ length: n }, () => Array(n).fill(0)); // for blue highlight
-  const courtMatrix = Array.from({ length: n }, () => Array(n).fill(0)); // for counts
-  const byesCount = Array(n).fill(0);
-
-  filteredRounds.forEach((round) => {
-    // Count byes
-    round.byes.forEach((b) => {
-      const idx = parseInt(b, 10) - 1;
-      if (idx >= 0 && idx < n) byesCount[idx]++;
-    });
-
-    // Count teammates (a+b, c+d)
-    round.matches.forEach((m) => {
-      const t1 = m.team1.map((x) => parseInt(x, 10) - 1);
-      const t2 = m.team2.map((x) => parseInt(x, 10) - 1);
-
-      // Teammates for blue highlight
-      if (t1[0] >= 0 && t1[1] >= 0) {
-        teammateMatrix[t1[0]][t1[1]]++;
-        teammateMatrix[t1[1]][t1[0]]++;
-      }
-      if (t2[0] >= 0 && t2[1] >= 0) {
-        teammateMatrix[t2[0]][t2[1]]++;
-        teammateMatrix[t2[1]][t2[0]]++;
-      }
-
-      // Count all courtmates for numbers (a+b+c+d combinations)
-      const allPlayers = [...t1, ...t2];
-      for (let i = 0; i < allPlayers.length; i++) {
-        for (let j = i + 1; j < allPlayers.length; j++) {
-          const p1 = allPlayers[i];
-          const p2 = allPlayers[j];
-          if (p1 >= 0 && p2 >= 0) {
-            courtMatrix[p1][p2]++;
-            courtMatrix[p2][p1]++;
+    filteredRounds.forEach((round) => {
+      // Count byes
+      round.byes.forEach((b) => {
+        const idx = parseInt(b, 10) - 1;
+        if (idx >= 0 && idx < n) byesCount[idx]++;
+      });
+      // Count teammates in blue, sum total times on court with anyone
+      round.matches.forEach((m) => {
+        const all = [...m.team1, ...m.team2].map((x) => parseInt(x, 10) - 1);
+        for (let i = 0; i < all.length; i++) {
+          for (let j = 0; j < all.length; j++) {
+            if (i !== j) matrix[all[i]][all[j]]++;
           }
         }
-      }
+      });
     });
-  });
 
-  return (
-    <div className="overflow-auto max-h-[500px]">
-      <table className="border-collapse border border-gray-400 text-xs table-auto">
-        <thead>
-          <tr>
-            <th className="border px-1 py-1 bg-gray-200 sticky top-0 left-0 z-10">Player</th>
-            {names.map((n, i) => (
-              <th
-                key={i}
-                className="border px-1 py-1 bg-gray-200 sticky top-0 z-5"
-              >
-                {n}
-              </th>
-            ))}
-            <th className="border px-1 py-1 bg-gray-200 sticky top-0 z-5">Byes</th>
-            <th className="border px-1 py-1 bg-gray-200 sticky top-0 z-5">Not played with</th>
-          </tr>
-        </thead>
-        <tbody>
-          {names.map((rowName, i) => (
-            <tr key={i}>
-              <td className="border px-1 py-1 font-semibold bg-gray-200 sticky left-0 z-5">{rowName}</td>
-              {names.map((_, j) => {
-                const isDiagonal = i === j;
-                const bgColor = isDiagonal
-                  ? "bg-gray-300"
-                  : teammateMatrix[i][j] > 0
-                  ? "bg-blue-300"
-                  : "";
-                return (
-                  <td key={j} className={`border px-1 py-1 text-center ${bgColor}`}>
-                    {isDiagonal ? "" : courtMatrix[i][j] > 0 ? courtMatrix[i][j] : ""}
-                  </td>
-                );
-              })}
-              <td className="border px-1 py-1 text-center">{byesCount[i]}</td>
-              <td className="border px-1 py-1 text-center">
-                {courtMatrix[i].filter((v, j) => i !== j && v === 0).length}
-              </td>
+    return (
+      <div className="overflow-auto max-h-[70vh]">
+        <table className="border-collapse border border-gray-400 text-xs">
+          <thead className="sticky top-0 bg-gray-100 z-10">
+            <tr>
+              <th className="border px-1 py-1 sticky left-0 z-20 bg-gray-100">Player</th>
+              {names.map((n, i) => (
+                <th key={i} className="border px-1 py-1">{n}</th>
+              ))}
+              <th className="border px-1 py-1">Byes</th>
+              <th className="border px-1 py-1">Not played with</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-};
+          </thead>
+          <tbody>
+            {names.map((rowName, i) => (
+              <tr key={i}>
+                <td className="border px-1 py-1 font-semibold sticky left-0 bg-gray-100">{rowName}</td>
+                {matrix[i].map((val, j) => {
+                  const isTeammate = filteredRounds.some((r) =>
+                    r.matches.some((m) =>
+                      (m.team1.includes(String(i+1)) && m.team1.includes(String(j+1))) ||
+                      (m.team2.includes(String(i+1)) && m.team2.includes(String(j+1)))
+                    )
+                  );
+                  return (
+                    <td
+                      key={j}
+                      className={`border px-1 py-1 text-center ${
+                        i === j ? "bg-gray-200" :
+                        isTeammate ? "bg-blue-300" : ""
+                      }`}
+                    >
+                      {i === j ? "" : val > 0 ? val : ""}
+                    </td>
+                  );
+                })}
+                <td className="border px-1 py-1 text-center">{byesCount[i]}</td>
+                <td className="border px-1 py-1 text-center">
+                  {matrix[i].filter((v, j) => j !== i && v === 0).length}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  };
 
   const genDisabled = !selectedPlayers || !selectedCourts || !selectedNumRounds;
 
   return (
     <div className="min-h-screen bg-gray-100 py-3 px-3 relative">
-      <div
-        className="mx-auto max-w-sm bg-white rounded-2xl shadow p-3"
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
+      <div className="mx-auto max-w-sm bg-white rounded-2xl shadow p-3"
+        onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}
       >
-       <h1 className="text-center text-xl font-bold mb-2">🏓 Pickleball Scheduler</h1>
-
-{/* Summary of current selection */}
-{selectedPlayers && selectedCourts && selectedNumRounds && (
-  <div className="text-center text-sm text-gray-600 mb-3">
-    Players: <strong>{selectedPlayers}</strong> | Courts: <strong>{selectedCourts}</strong> | Rounds: <strong>{selectedNumRounds}</strong>
-  </div>
-)}
+        <h1 className="text-center text-xl font-bold mb-1">🏓 Pickleball Scheduler</h1>
+        {view === "schedule" && (
+          <div className="text-center text-sm text-gray-600 mb-2">
+            Players: {selectedPlayers} | Courts: {selectedCourts} | Rounds: {selectedNumRounds}
+          </div>
+        )}
 
         {view === "input" && (
           <>
-            {/* Players dropdown */}
+            {/* Players, courts, rounds dropdowns */}
             <div className="mb-3">
               <label className="text-xs text-gray-600">Players</label>
-              <select
-                className="w-full border rounded p-2 mt-1 text-sm"
-                value={selectedPlayers}
-                onChange={(e) => setSelectedPlayers(e.target.value)}
-              >
+              <select className="w-full border rounded p-2 mt-1 text-sm"
+                value={selectedPlayers} onChange={(e) => setSelectedPlayers(e.target.value)}>
                 <option value="">Select number of players</option>
-                {playersOptions.map((p) => (
-                  <option key={p} value={p}>{p}</option>
-                ))}
+                {playersOptions.map((p) => <option key={p} value={p}>{p}</option>)}
               </select>
             </div>
-
-            {/* Courts dropdown */}
             {courtsOptions.length > 0 && (
               <div className="mb-3">
                 <label className="text-xs text-gray-600">Courts</label>
-                <select
-                  className="w-full border rounded p-2 mt-1 text-sm"
-                  value={selectedCourts}
-                  onChange={(e) => setSelectedCourts(e.target.value)}
-                >
+                <select className="w-full border rounded p-2 mt-1 text-sm"
+                  value={selectedCourts} onChange={(e) => setSelectedCourts(e.target.value)}>
                   <option value="">Select courts</option>
-                  {courtsOptions.map((c) => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
+                  {courtsOptions.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
             )}
-
-            {/* Rounds dropdown */}
             {roundsOptions.length > 0 && (
               <div className="mb-3">
                 <label className="text-xs text-gray-600">Number of Rounds to show</label>
-                <select
-                  className="w-full border rounded p-2 mt-1 text-sm"
-                  value={selectedNumRounds}
-                  onChange={(e) => setSelectedNumRounds(e.target.value)}
-                >
+                <select className="w-full border rounded p-2 mt-1 text-sm"
+                  value={selectedNumRounds} onChange={(e) => setSelectedNumRounds(e.target.value)}>
                   <option value="">Select rounds</option>
-                  {roundsOptions.map((r) => (
-                    <option key={r} value={r}>{r}</option>
-                  ))}
+                  {roundsOptions.map((r) => <option key={r} value={r}>{r}</option>)}
                 </select>
               </div>
             )}
 
+            {/* Player names input */}
+            {selectedPlayers && (
+              <div className="mb-3">
+                <label className="text-xs text-gray-600">Player Names</label>
+                <div className="border rounded h-44 overflow-y-auto p-2 bg-blue-50 mt-1">
+                  {Array.from({ length: maxPlayerCount }).map((_, i) => (
+                    <div key={i} className="flex gap-2 items-center mb-1">
+                      <div className="w-6 text-xs text-gray-500">{i + 1}</div>
+                      <input
+                        className="flex-1 p-1 border rounded text-sm"
+                        value={playerNames[i] || ""}
+                        onChange={(e) => {
+                          const copy = [...playerNames]; copy[i] = e.target.value; setPlayerNames(copy);
+                        }}
+                        placeholder="Enter name"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Randomize & Undo */}
+            <div className="flex gap-2 mb-3">
+              <button
+                className={`flex-1 p-2 rounded text-sm ${!selectedPlayers ? "bg-gray-300 text-white cursor-not-allowed" : "bg-yellow-500 text-white"}`}
+                onClick={() => {
+                  const filled = playerNames.filter((p) => p && p.trim() !== "");
+                  for (let i = filled.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [filled[i], filled[j]] = [filled[j], filled[i]];
+                  }
+                  const blanks = Array(maxPlayerCount - filled.length).fill("");
+                  previousNamesRef.current = [...playerNames];
+                  setPlayerNames([...filled, ...blanks]);
+                }} disabled={!selectedPlayers}>🎲 Randomize</button>
+
+              <button
+                className={`flex-1 p-2 rounded text-sm ${!previousNamesRef.current.length ? "bg-gray-300 text-white cursor-not-allowed" : "bg-gray-400 text-white"}`}
+                onClick={() => setPlayerNames([...previousNamesRef.current])} disabled={!previousNamesRef.current.length}>↩ Undo</button>
+            </div>
+
+            {/* Generate Schedule */}
             <button
               onClick={buildFilteredRounds}
               className={`${genDisabled ? "w-full bg-gray-400 text-white p-2 rounded text-sm cursor-not-allowed" : "w-full bg-blue-600 text-white p-2 rounded text-sm"}`}
               disabled={genDisabled}
-            >
-              Generate Schedule
-            </button>
+            >Generate Schedule</button>
           </>
         )}
 
         {view === "schedule" && (
           <>
-            {/* Top summary + buttons */}
             <div className="flex justify-between items-start mb-2">
               <div className="flex items-start gap-3">
-                <button
-                  className="text-xs bg-red-500 text-white px-2 py-1 rounded shadow"
-                  onClick={handleRefresh}
-                >
-                  🔄 Refresh
-                </button>
-                <button
-                  className="text-xs text-blue-600 underline"
-                  onClick={() => setView("matrix")}
-                >
-                  📊 Matrix
-                </button>
+                <button className="text-xs bg-red-500 text-white px-2 py-1 rounded shadow" onClick={handleRefresh}>🔄 Refresh</button>
+                <button className="text-xs text-blue-600 underline" onClick={() => setView("matrix")}>📊 Matrix</button>
               </div>
-
-              <button
-                className="text-xs text-blue-600 underline"
-                onClick={() => setView("input")}
-              >
-                ✏️ Edit
-              </button>
+              <button className="text-xs text-blue-600 underline" onClick={() => setView("input")}>✏️ Edit</button>
             </div>
 
-            {/* Round display */}
             {filteredRounds.length === 0 ? (
               <p className="text-sm text-center text-gray-500">No rounds available.</p>
             ) : (
               <>
                 <div className="mb-2 text-center">
                   <div className="text-lg text-gray-600">Round</div>
-                  <div className="text-lg font-semibold">
-                    {filteredRounds[currentRoundIndex].roundLabel}
-                  </div>
+                  <div className="text-lg font-semibold">{filteredRounds[currentRoundIndex].roundLabel}</div>
                 </div>
 
                 <div>
@@ -395,17 +364,9 @@ const renderMatrix = () => {
                 </div>
 
                 <div className="flex justify-between items-center mt-3">
-                  <button
-                    onClick={prevRound}
-                    disabled={currentRoundIndex === 0}
-                    className={`px-3 py-1 rounded text-white text-sm ${currentRoundIndex === 0 ? "bg-gray-300" : "bg-blue-600"}`}
-                  >⬅</button>
+                  <button onClick={prevRound} disabled={currentRoundIndex === 0} className={`px-3 py-1 rounded text-white text-sm ${currentRoundIndex === 0 ? "bg-gray-300" : "bg-blue-600"}`}>⬅</button>
                   <div className="text-xs text-gray-600">{currentRoundIndex + 1} / {filteredRounds.length}</div>
-                  <button
-                    onClick={nextRound}
-                    disabled={currentRoundIndex === filteredRounds.length - 1}
-                    className={`px-3 py-1 rounded text-white text-sm ${currentRoundIndex === filteredRounds.length - 1 ? "bg-gray-300" : "bg-blue-600"}`}
-                  >➡</button>
+                  <button onClick={nextRound} disabled={currentRoundIndex === filteredRounds.length - 1} className={`px-3 py-1 rounded text-white text-sm ${currentRoundIndex === filteredRounds.length - 1 ? "bg-gray-300" : "bg-blue-600"}`}>➡</button>
                 </div>
               </>
             )}
@@ -415,12 +376,7 @@ const renderMatrix = () => {
         {view === "matrix" && (
           <>
             {renderMatrix()}
-            <button
-              onClick={() => setView("schedule")}
-              className="mt-2 w-full bg-blue-600 text-white p-2 rounded text-sm"
-            >
-              ⬅ Return to Schedule
-            </button>
+            <button onClick={() => setView("schedule")} className="mt-2 w-full bg-blue-600 text-white p-2 rounded text-sm">⬅ Return to Schedule</button>
           </>
         )}
       </div>
