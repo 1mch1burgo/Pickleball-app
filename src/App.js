@@ -212,7 +212,7 @@ export default function App() {
                         isTeammate ? "bg-blue-300" : ""
                       }`}
                     >
-                      {i === j ? "" : val > 0 ? val : ""}
+                      {i === j ? "" : val : ""}
                     </td>
                   );
                 })}
