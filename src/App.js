@@ -208,7 +208,7 @@ export default function App() {
                     <td
                       key={j}
                       className={`border px-1 py-1 text-center ${
-                        i === j ? "bg-darkgray-200" :
+                        i === j ? "bg-gray-400" :
                         isTeammate ? "bg-blue-300" : ""
                       }`}
                     >
