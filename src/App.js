@@ -3,6 +3,20 @@ import React, { useEffect, useState, useRef } from "react";
 import Papa from "papaparse";
 
 export default function App() {
+    // Prevent Android Back Button from closing PWA
+  useEffect(() => {
+    const blockBack = (e) => {
+      // Prevent leaving the PWA
+      e.preventDefault();
+      window.history.pushState(null, "", window.location.href);
+    };
+
+    // Push an initial state so back button has "nowhere to go"
+    window.history.pushState(null, "", window.location.href);
+    window.addEventListener("popstate", blockBack);
+
+    return () => window.removeEventListener("popstate", blockBack);
+  }, []);
   const [csvData, setCsvData] = useState([]);
   const [playersOptions, setPlayersOptions] = useState([]);
   const [courtsOptions, setCourtsOptions] = useState([]);
