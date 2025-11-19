@@ -5,31 +5,35 @@ import Papa from "papaparse";
 export default function App() {
 // Inside your App component
 const [lastBackPress, setLastBackPress] = useState(0);
-
 useEffect(() => {
-  const handleBackButton = (e) => {
-    e.preventDefault();
+  let lastBackPress = 0;
+
+  // Ensure app has at least one history entry
+  window.history.pushState({ page: 1 }, "", "");
+
+  const handleBackButton = () => {
     const now = Date.now();
-    if (now - lastBackPress < 2000) {
-      // Exit the app
+
+    if (now - lastBackPress < 1000) {
+      // Exit the app: allow normal behavior
       window.removeEventListener("popstate", handleBackButton);
-      window.history.back(); // Use window.history instead of plain 'history'
+      window.history.back();
     } else {
-      setLastBackPress(now);
-      alert("Press back again to exit"); // Simple fallback message
-      // Push a new state to prevent immediate exit
-      window.history.pushState(null, "", window.location.href);
+      lastBackPress = now;
+      // Show message
+      alert("Press back again within 1 second to exit");
+      // Push a dummy state so back doesn't close app
+      window.history.pushState({ page: 1 }, "", "");
     }
   };
 
-  // Push initial state so back has somewhere to go
-  window.history.pushState(null, "", window.location.href);
   window.addEventListener("popstate", handleBackButton);
 
-  return () => window.removeEventListener("popstate", handleBackButton);
-}, [lastBackPress]);
+  return () => {
+    window.removeEventListener("popstate", handleBackButton);
+  };
+}, []);
 
-  
   // --- CSV & Schedule State ---
   const [csvData, setCsvData] = useState([]);
   const [playersOptions, setPlayersOptions] = useState([]);
