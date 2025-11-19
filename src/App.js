@@ -4,32 +4,35 @@ import Papa from "papaparse";
 
 export default function App() {
   // --- BACK BUTTON CONFIRMATION ---
-  useEffect(() => {
-    // Push a dummy history entry on load
-    window.history.pushState({ page: "main" }, "", "");
+ useEffect(() => {
+  // Keep a dummy history stack entry
+  const pushDummy = () => window.history.pushState({ dummy: true }, "");
 
-    const handleBackButton = (e) => {
-      const confirmExit = window.confirm(
-        "Press OK to exit the app and lose unsaved data, or Cancel to stay."
-      );
+  pushDummy();
 
-      if (confirmExit) {
-        // Allow default back behavior
-        window.removeEventListener("popstate", handleBackButton);
-        window.history.back();
-      } else {
-        // Cancel back press: restore dummy state
-        window.history.pushState({ page: "main" }, "", "");
-      }
-    };
+  const handleBackButton = (e) => {
+    e.preventDefault();
 
-    window.addEventListener("popstate", handleBackButton);
+    const confirmExit = window.confirm(
+      "Press OK to exit the app and lose unsaved data, or Cancel to stay."
+    );
 
-    return () => {
+    if (confirmExit) {
+      // User really wants to exit: allow default behavior
       window.removeEventListener("popstate", handleBackButton);
-    };
-  }, []);
+      window.history.back();
+    } else {
+      // Keep app open: re-add dummy state
+      pushDummy();
+    }
+  };
 
+  window.addEventListener("popstate", handleBackButton);
+
+  return () => {
+    window.removeEventListener("popstate", handleBackButton);
+  };
+}, []);
   // --- STATE ---
   const [csvData, setCsvData] = useState([]);
   const [playersOptions, setPlayersOptions] = useState([]);
