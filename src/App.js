@@ -9,32 +9,25 @@ useEffect(() => {
   window.history.pushState({ page: 1 }, "", "");
 
   const stopBackClose = () => {
-    // Android standalone mode fires popstate only once,
-    // After that Android tries to close the PWA.
     window.history.pushState({ page: 1 }, "", "");
   };
 
   window.addEventListener("popstate", stopBackClose);
 
   document.addEventListener("visibilitychange", () => {
-    // When Android tries to close the app, it triggers visibilitychange
     if (document.visibilityState === "hidden") {
-      // Immediately restore history so app does NOT close
       setTimeout(() => {
         window.history.pushState({ page: 1 }, "", "");
       }, 10);
     }
   });
 
+  // CLEANUP
   return () => {
     window.removeEventListener("popstate", stopBackClose);
   };
 }, []);
-  return () => {
-    window.removeEventListener("popstate", stopBackClose);
-  };
-}, []);
-
+    
   const [csvData, setCsvData] = useState([]);
   const [playersOptions, setPlayersOptions] = useState([]);
   const [courtsOptions, setCourtsOptions] = useState([]);
