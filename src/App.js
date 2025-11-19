@@ -3,30 +3,35 @@ import React, { useEffect, useState, useRef } from "react";
 import Papa from "papaparse";
 
 export default function App() {
-  // --- Back Button "Press Twice to Exit" Logic ---
-  const [exitToast, setExitToast] = useState(false);
-  const lastBackPressRef = useRef(0);
 
-  useEffect(() => {
-    window.history.pushState({ pwa: true }, "");
+// Inside your App component, at the top
+const [lastBackPress, setLastBackPress] = useState(0);
 
-    const handleBack = () => {
-      const now = Date.now();
-      if (now - lastBackPressRef.current < 1000) {
-        // allow exit
-        return;
-      }
-      setExitToast(true);
-      setTimeout(() => setExitToast(false), 1500);
-      if (navigator.vibrate) navigator.vibrate(100);
-      window.history.pushState({ pwa: true }, "");
-      lastBackPressRef.current = now;
-    };
+useEffect(() => {
+  const handleBackButton = (e) => {
+    e.preventDefault();
 
-    window.addEventListener("popstate", handleBack);
-    return () => window.removeEventListener("popstate", handleBack);
-  }, []);
+    const now = Date.now();
+    if (now - lastBackPress < 2000) {
+      // Exit the app (allow default behavior)
+      window.removeEventListener("popstate", handleBackButton);
+      history.back(); // Actually exit
+    } else {
+      // First back press → show message
+      setLastBackPress(now);
+      alert("Press back again to exit"); // You can replace with a nicer toast
+      // Push a new state to prevent immediate exit
+      window.history.pushState(null, "", window.location.href);
+    }
+  };
 
+  // Push initial state so back has somewhere to go
+  window.history.pushState(null, "", window.location.href);
+  window.addEventListener("popstate", handleBackButton);
+
+  return () => window.removeEventListener("popstate", handleBackButton);
+}, [lastBackPress]);
+  
   // --- CSV & Schedule State ---
   const [csvData, setCsvData] = useState([]);
   const [playersOptions, setPlayersOptions] = useState([]);
