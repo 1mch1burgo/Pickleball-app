@@ -3,50 +3,50 @@ import React, { useEffect, useState, useRef } from "react";
 import Papa from "papaparse";
 
 export default function App() {
-// Inside your App component
-const [lastBackPress, setLastBackPress] = useState(0);
-useEffect(() => {
-  let lastBackPress = 0;
+  // Prevent Android Back Button from closing PWA
+  useEffect(() => {
+    let lastBackPress = 0;
 
-  // Ensure app has at least one history entry
-  window.history.pushState({ page: 1 }, "", "");
+    // Ensure app has at least one history entry
+    window.history.pushState({ page: 1 }, "", "");
 
-  const handleBackButton = () => {
-    const now = Date.now();
+    const handleBackButton = () => {
+      const now = Date.now();
+      if (now - lastBackPress < 1000) {
+        // Exit the app: allow normal behavior
+        window.removeEventListener("popstate", handleBackButton);
+        window.history.back();
+      } else {
+        lastBackPress = now;
+        // Show message
+        alert("Press back again within 1 second to exit");
+        // Push a dummy state so back doesn't close app
+        window.history.pushState({ page: 1 }, "", "");
+      }
+    };
 
-    if (now - lastBackPress < 1000) {
-      // Exit the app: allow normal behavior
+    window.addEventListener("popstate", handleBackButton);
+
+    return () => {
       window.removeEventListener("popstate", handleBackButton);
-      window.history.back();
-    } else {
-      lastBackPress = now;
-      // Show message
-      alert("Press back again within 1 second to exit");
-      // Push a dummy state so back doesn't close app
-      window.history.pushState({ page: 1 }, "", "");
-    }
-  };
+    };
+  }, []);
 
-  window.addEventListener("popstate", handleBackButton);
-
-  return () => {
-    window.removeEventListener("popstate", handleBackButton);
-  };
-}, []);
-
-  // --- CSV & Schedule State ---
   const [csvData, setCsvData] = useState([]);
   const [playersOptions, setPlayersOptions] = useState([]);
   const [courtsOptions, setCourtsOptions] = useState([]);
   const [roundsOptions, setRoundsOptions] = useState([]);
+
   const [selectedPlayers, setSelectedPlayers] = useState("");
   const [selectedCourts, setSelectedCourts] = useState("");
   const [selectedNumRounds, setSelectedNumRounds] = useState("");
+
   const [playerNames, setPlayerNames] = useState([]);
   const previousNamesRef = useRef([]);
   const [filteredRounds, setFilteredRounds] = useState([]);
   const [currentRoundIndex, setCurrentRoundIndex] = useState(0);
   const [view, setView] = useState("input"); // input | schedule | matrix
+
   const touchStartXRef = useRef(null);
   const touchEndXRef = useRef(null);
 
@@ -198,7 +198,7 @@ useEffect(() => {
         const idx = parseInt(b, 10) - 1;
         if (idx >= 0 && idx < n) byesCount[idx]++;
       });
-      // Count teammates
+      // Count teammates in blue, sum total times on court with anyone
       round.matches.forEach((m) => {
         const all = [...m.team1, ...m.team2].map((x) => parseInt(x, 10) - 1);
         for (let i = 0; i < all.length; i++) {
@@ -215,7 +215,9 @@ useEffect(() => {
           <thead className="sticky top-0 bg-gray-100 z-10">
             <tr>
               <th className="border px-1 py-1 sticky left-0 z-20 bg-gray-100">Player</th>
-              {names.map((n, i) => <th key={i} className="border px-1 py-1">{n}</th>)}
+              {names.map((n, i) => (
+                <th key={i} className="border px-1 py-1">{n}</th>
+              ))}
               <th className="border px-1 py-1">Byes</th>
               <th className="border px-1 py-1">Not played with</th>
             </tr>
@@ -234,12 +236,9 @@ useEffect(() => {
                   return (
                     <td
                       key={j}
-                      className={`border px-1 py-1 text-center ${
-                        i === j ? "bg-gray-400" :
-                        isTeammate ? "bg-blue-300" : ""
-                      }`}
+                      className={`border px-1 py-1 text-center ${i === j ? "bg-gray-400" : isTeammate ? "bg-blue-300" : ""}`}
                     >
-                      {i === j ? "" : val >= 0 ? val : ""}
+                      {i === j ? "" : val>=0 ? val : ""}
                     </td>
                   );
                 })}
@@ -262,7 +261,6 @@ useEffect(() => {
       <div className="mx-auto max-w-sm bg-white rounded-2xl shadow p-3"
         onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}
       >
-        {/* --- HEADER & DROPDOWNS --- */}
         <h1 className="text-center text-xl font-bold mb-1">🏓 Pickleball Scheduler</h1>
         {view === "schedule" && (
           <div className="text-center text-sm text-gray-600 mb-2">
@@ -406,13 +404,6 @@ useEffect(() => {
             {renderMatrix()}
             <button onClick={() => setView("schedule")} className="mt-2 w-full bg-blue-600 text-white p-2 rounded text-sm">⬅ Return to Schedule</button>
           </>
-        )}
-
-        {/* --- Exit Toast --- */}
-        {exitToast && (
-          <div className="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-black text-white text-sm px-4 py-2 rounded opacity-90 z-50">
-            Press back again to exit
-          </div>
         )}
       </div>
     </div>
