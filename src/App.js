@@ -4,33 +4,45 @@ import Papa from "papaparse";
 
 export default function App() {
   // Prevent Android Back Button from closing PWA
+
 useEffect(() => {
   let lastBackPress = 0;
 
-  const handleBackButton = (e) => {
-    e.preventDefault();
+  const onBack = (e) => {
+    e.preventDefault(); // stop default navigation
     const now = Date.now();
+
     if (now - lastBackPress < 1000) {
-      // Exit the app by going back in history
-      window.removeEventListener("popstate", handleBackButton);
+      // Allow exit
+      window.removeEventListener("popstate", onBack);
       window.history.back();
     } else {
       lastBackPress = now;
       alert("Press back again within 1 second to exit");
-      // Push dummy state so back button doesn't close app
-      window.history.pushState({ page: 1 }, "", "");
+      // Push dummy state to prevent PWA from closing
+      setTimeout(() => {
+        window.history.pushState({ page: 1 }, "", "");
+      }, 0);
     }
   };
 
-  // Push initial state to prevent closing
+  // Always push initial state
   window.history.pushState({ page: 1 }, "", "");
-  window.addEventListener("popstate", handleBackButton);
+  window.addEventListener("popstate", onBack);
+
+  // Also prevent closing if Android triggers visibility change
+  const onVisibilityChange = () => {
+    if (document.visibilityState === "hidden") {
+      setTimeout(() => window.history.pushState({ page: 1 }, "", ""), 0);
+    }
+  };
+  document.addEventListener("visibilitychange", onVisibilityChange);
 
   return () => {
-    window.removeEventListener("popstate", handleBackButton);
+    window.removeEventListener("popstate", onBack);
+    document.removeEventListener("visibilitychange", onVisibilityChange);
   };
 }, []);
-
   const [csvData, setCsvData] = useState([]);
   const [playersOptions, setPlayersOptions] = useState([]);
   const [courtsOptions, setCourtsOptions] = useState([]);
