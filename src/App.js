@@ -358,8 +358,7 @@ export default function App() {
               disabled={genDisabled}
             >Generate Schedule</button>
 
-            {/* Clear Saved Data */}
-            <button onClick={handleRefresh} className="mt-2 w-full bg-red-500 text-white p-2 rounded text-sm">Clear All Data</button>
+          
           </>
         )}
 
