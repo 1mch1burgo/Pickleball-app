@@ -300,8 +300,11 @@ useEffect(() => {
           </div>
         )}
 
-        {view === "schedule" && (
-          <div className="text-center text-sm text-gray-600 mb-2">
-            Players: {selectedPlayers} | Courts: {selectedCourts} | Rounds: {selectedNumRounds}
-          </div>
-        )}
+       {view === "schedule" && (
+        <div className="text-center text-sm text-gray-600 mb-2">
+          Players: {selectedPlayers} | Courts: {selectedCourts} | Rounds: {selectedNumRounds}
+        </div>
+      )}
+    </div> {/* closes inner mx-auto div */}
+  </div>   {/* closes min-h-screen div */}
+);
