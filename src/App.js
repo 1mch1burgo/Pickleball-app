@@ -3,46 +3,45 @@ import React, { useEffect, useState, useRef } from "react";
 import Papa from "papaparse";
 
 export default function App() {
-    // Prevent Android Back Button from closing PWA
-useEffect(() => {
-  // Ensure app has at least one history entry
-  window.history.pushState({ page: 1 }, "", "");
-
-  const stopBackClose = () => {
+  // Prevent Android Back Button from closing PWA
+  useEffect(() => {
     window.history.pushState({ page: 1 }, "", "");
-  };
+    const stopBackClose = () => {
+      window.history.pushState({ page: 1 }, "", "");
+    };
+    window.addEventListener("popstate", stopBackClose);
 
-  window.addEventListener("popstate", stopBackClose);
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "hidden") {
+        setTimeout(() => {
+          window.history.pushState({ page: 1 }, "", "");
+        }, 10);
+      }
+    });
 
-  document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "hidden") {
-      setTimeout(() => {
-        window.history.pushState({ page: 1 }, "", "");
-      }, 10);
-    }
-  });
+    return () => {
+      window.removeEventListener("popstate", stopBackClose);
+    };
+  }, []);
 
-  // CLEANUP
-  return () => {
-    window.removeEventListener("popstate", stopBackClose);
-  };
-}, []);
-    
   const [csvData, setCsvData] = useState([]);
   const [playersOptions, setPlayersOptions] = useState([]);
   const [courtsOptions, setCourtsOptions] = useState([]);
   const [roundsOptions, setRoundsOptions] = useState([]);
 
-  const [selectedPlayers, setSelectedPlayers] = useState("");
-  const [selectedCourts, setSelectedCourts] = useState("");
-  const [selectedNumRounds, setSelectedNumRounds] = useState("");
+  const [selectedPlayers, setSelectedPlayers] = useState(
+    localStorage.getItem("selectedPlayers") || ""
+  );
+  const [selectedCourts, setSelectedCourts] = useState(
+    localStorage.getItem("selectedCourts") || ""
+  );
+  const [selectedNumRounds, setSelectedNumRounds] = useState(
+    localStorage.getItem("selectedNumRounds") || ""
+  );
 
-  // Load player names from localStorage
-  const [playerNames, setPlayerNames] = useState(() => {
-    const saved = localStorage.getItem("playerNames");
-    return saved ? JSON.parse(saved) : [];
-  });
-
+  const [playerNames, setPlayerNames] = useState(
+    JSON.parse(localStorage.getItem("playerNames") || "[]")
+  );
   const previousNamesRef = useRef([]);
   const [filteredRounds, setFilteredRounds] = useState([]);
   const [currentRoundIndex, setCurrentRoundIndex] = useState(0);
@@ -51,7 +50,16 @@ useEffect(() => {
   const touchStartXRef = useRef(null);
   const touchEndXRef = useRef(null);
 
-  // Save player names to localStorage whenever they change
+  // Save all state to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem("selectedPlayers", selectedPlayers);
+  }, [selectedPlayers]);
+  useEffect(() => {
+    localStorage.setItem("selectedCourts", selectedCourts);
+  }, [selectedCourts]);
+  useEffect(() => {
+    localStorage.setItem("selectedNumRounds", selectedNumRounds);
+  }, [selectedNumRounds]);
   useEffect(() => {
     localStorage.setItem("playerNames", JSON.stringify(playerNames));
   }, [playerNames]);
@@ -164,6 +172,7 @@ useEffect(() => {
 
   const handleRefresh = () => {
     if (window.confirm("Do you really want to refresh? This will lose any unsaved data.")) {
+      localStorage.clear();
       window.location.reload();
     }
   };
@@ -285,142 +294,148 @@ useEffect(() => {
           </div>
         )}
 
-              {/* Players, courts, rounds dropdowns */}
+        {/* Rest of code remains unchanged */}
+        {/* Input view */}
+        {view === "input" && (
+          <>
+            {/* Players, courts, rounds dropdowns */}
+            <div className="mb-3">
+              <label className="text-xs text-gray-600">Players</label>
+              <select className="w-full border rounded p-2 mt-1 text-sm"
+                value={selectedPlayers} onChange={(e) => setSelectedPlayers(e.target.value)}>
+                <option value="">Select number of players</option>
+                {playersOptions.map((p) => <option key={p} value={p}>{p}</option>)}
+              </select>
+            </div>
+            {courtsOptions.length > 0 && (
               <div className="mb-3">
-                <label className="text-xs text-gray-600">Players</label>
+                <label className="text-xs text-gray-600">Courts</label>
                 <select className="w-full border rounded p-2 mt-1 text-sm"
-                  value={selectedPlayers} onChange={(e) => setSelectedPlayers(e.target.value)}>
-                  <option value="">Select number of players</option>
-                  {playersOptions.map((p) => <option key={p} value={p}>{p}</option>)}
+                  value={selectedCourts} onChange={(e) => setSelectedCourts(e.target.value)}>
+                  <option value="">Select courts</option>
+                  {courtsOptions.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
-              {courtsOptions.length > 0 && (
-                <div className="mb-3">
-                  <label className="text-xs text-gray-600">Courts</label>
-                  <select className="w-full border rounded p-2 mt-1 text-sm"
-                    value={selectedCourts} onChange={(e) => setSelectedCourts(e.target.value)}>
-                    <option value="">Select courts</option>
-                    {courtsOptions.map((c) => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                </div>
-              )}
-              {roundsOptions.length > 0 && (
-                <div className="mb-3">
-                  <label className="text-xs text-gray-600">Number of Rounds to show</label>
-                  <select className="w-full border rounded p-2 mt-1 text-sm"
-                    value={selectedNumRounds} onChange={(e) => setSelectedNumRounds(e.target.value)}>
-                    <option value="">Select rounds</option>
-                    {roundsOptions.map((r) => <option key={r} value={r}>{r}</option>)}
-                  </select>
-                </div>
-              )}
-
-              {/* Player names input */}
-              {selectedPlayers && (
-                <div className="mb-3">
-                  <label className="text-xs text-gray-600">Player Names</label>
-                  <div className="border rounded h-44 overflow-y-auto p-2 bg-blue-50 mt-1">
-                    {Array.from({ length: maxPlayerCount }).map((_, i) => (
-                      <div key={i} className="flex gap-2 items-center mb-1">
-                        <div className="w-6 text-xs text-gray-500">{i + 1}</div>
-                        <input
-                          className="flex-1 p-1 border rounded text-sm"
-                          value={playerNames[i] || ""}
-                          onChange={(e) => {
-                            const copy = [...playerNames]; copy[i] = e.target.value; setPlayerNames(copy);
-                          }}
-                          placeholder="Enter name"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Randomize & Undo */}
-              <div className="flex gap-2 mb-3">
-                <button
-                  className={`flex-1 p-2 rounded text-sm ${!selectedPlayers ? "bg-gray-300 text-white cursor-not-allowed" : "bg-yellow-500 text-white"}`}
-                  onClick={() => {
-                    const filled = playerNames.filter((p) => p && p.trim() !== "");
-                    for (let i = filled.length - 1; i > 0; i--) {
-                      const j = Math.floor(Math.random() * (i + 1));
-                      [filled[i], filled[j]] = [filled[j], filled[i]];
-                    }
-                    const blanks = Array(maxPlayerCount - filled.length).fill("");
-                    previousNamesRef.current = [...playerNames];
-                    setPlayerNames([...filled, ...blanks]);
-                  }} disabled={!selectedPlayers}>🎲 Randomize</button>
-
-                <button
-                  className={`flex-1 p-2 rounded text-sm ${!previousNamesRef.current.length ? "bg-gray-300 text-white cursor-not-allowed" : "bg-gray-400 text-white"}`}
-                  onClick={() => setPlayerNames([...previousNamesRef.current])} disabled={!previousNamesRef.current.length}>↩ Undo</button>
+            )}
+            {roundsOptions.length > 0 && (
+              <div className="mb-3">
+                <label className="text-xs text-gray-600">Number of Rounds to show</label>
+                <select className="w-full border rounded p-2 mt-1 text-sm"
+                  value={selectedNumRounds} onChange={(e) => setSelectedNumRounds(e.target.value)}>
+                  <option value="">Select rounds</option>
+                  {roundsOptions.map((r) => <option key={r} value={r}>{r}</option>)}
+                </select>
               </div>
+            )}
 
-              {/* Generate Schedule */}
+            {/* Player names input */}
+            {selectedPlayers && (
+              <div className="mb-3">
+                <label className="text-xs text-gray-600">Player Names</label>
+                <div className="border rounded h-44 overflow-y-auto p-2 bg-blue-50 mt-1">
+                  {Array.from({ length: maxPlayerCount }).map((_, i) => (
+                    <div key={i} className="flex gap-2 items-center mb-1">
+                      <div className="w-6 text-xs text-gray-500">{i + 1}</div>
+                      <input
+                        className="flex-1 p-1 border rounded text-sm"
+                        value={playerNames[i] || ""}
+                        onChange={(e) => {
+                          const copy = [...playerNames]; copy[i] = e.target.value; setPlayerNames(copy);
+                        }}
+                        placeholder="Enter name"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Randomize & Undo */}
+            <div className="flex gap-2 mb-3">
               <button
-                onClick={buildFilteredRounds}
-                className={`${genDisabled ? "w-full bg-gray-400 text-white p-2 rounded text-sm cursor-not-allowed" : "w-full bg-blue-600 text-white p-2 rounded text-sm"}`}
-                disabled={genDisabled}
-              >Generate Schedule</button>
-            </>
-          )}
+                className={`flex-1 p-2 rounded text-sm ${!selectedPlayers ? "bg-gray-300 text-white cursor-not-allowed" : "bg-yellow-500 text-white"}`}
+                onClick={() => {
+                  const filled = playerNames.filter((p) => p && p.trim() !== "");
+                  for (let i = filled.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [filled[i], filled[j]] = [filled[j], filled[i]];
+                  }
+                  const blanks = Array(maxPlayerCount - filled.length).fill("");
+                  previousNamesRef.current = [...playerNames];
+                  setPlayerNames([...filled, ...blanks]);
+                }} disabled={!selectedPlayers}>🎲 Randomize</button>
 
-          {view === "schedule" && (
-            <>
-              <div className="flex justify-between items-start mb-2">
-                <div className="flex items-start gap-3">
-                  <button className="text-xs bg-red-500 text-white px-2 py-1 rounded shadow" onClick={handleRefresh}>🔄 Refresh</button>
-                  <button className="text-xs text-blue-600 underline" onClick={() => setView("matrix")}>📊 Matrix</button>
-                </div>
-                <button className="text-xs text-blue-600 underline" onClick={() => setView("input")}>✏️ Edit</button>
+              <button
+                className={`flex-1 p-2 rounded text-sm ${!previousNamesRef.current.length ? "bg-gray-300 text-white cursor-not-allowed" : "bg-gray-400 text-white"}`}
+                onClick={() => setPlayerNames([...previousNamesRef.current])} disabled={!previousNamesRef.current.length}>↩ Undo</button>
+            </div>
+
+            {/* Generate Schedule */}
+            <button
+              onClick={buildFilteredRounds}
+              className={`${genDisabled ? "w-full bg-gray-400 text-white p-2 rounded text-sm cursor-not-allowed" : "w-full bg-blue-600 text-white p-2 rounded text-sm"}`}
+              disabled={genDisabled}
+            >Generate Schedule</button>
+          </>
+        )}
+
+        {/* Schedule view */}
+        {view === "schedule" && (
+          <>
+            <div className="flex justify-between items-start mb-2">
+              <div className="flex items-start gap-3">
+                <button className="text-xs bg-red-500 text-white px-2 py-1 rounded shadow" onClick={handleRefresh}>🔄 Refresh</button>
+                <button className="text-xs text-blue-600 underline" onClick={() => setView("matrix")}>📊 Matrix</button>
               </div>
+              <button className="text-xs text-blue-600 underline" onClick={() => setView("input")}>✏️ Edit</button>
+            </div>
 
-              {filteredRounds.length === 0 ? (
-                <p className="text-sm text-center text-gray-500">No rounds available.</p>
-              ) : (
-                <>
-                  <div className="mb-2 text-center">
-                    <div className="text-lg text-gray-600">Round</div>
-                    <div className="text-lg font-semibold">{filteredRounds[currentRoundIndex].roundLabel}</div>
-                  </div>
+            {filteredRounds.length === 0 ? (
+              <p className="text-sm text-center text-gray-500">No rounds available.</p>
+            ) : (
+              <>
+                <div className="mb-2 text-center">
+                  <div className="text-lg text-gray-600">Round</div>
+                  <div className="text-lg font-semibold">{filteredRounds[currentRoundIndex].roundLabel}</div>
+                </div>
 
-                  <div>
-                    {filteredRounds[currentRoundIndex].matches.map((m, idx) => (
-                      <div key={idx} className="bg-blue-50 rounded-lg p-3 mb-3 border">
-                        <div className="text-center text-lg text-gray-500">Court {m.court}</div>
-                        <div className="mt-1 text-center text-md font-semibold">
-                          <div>{m.team1.map(replaceNumbersWithNames).join("   /   ")}</div>
-                          <div className="text-center text-sm font-semibold mt-1 mb-1">--------</div>
-                          <div>{m.team2.map(replaceNumbersWithNames).join("   /   ")}</div>
-                        </div>
+                <div>
+                  {filteredRounds[currentRoundIndex].matches.map((m, idx) => (
+                    <div key={idx} className="bg-blue-50 rounded-lg p-3 mb-3 border">
+                      <div className="text-center text-lg text-gray-500">Court {m.court}</div>
+                      <div className="mt-1 text-center text-md font-semibold">
+                        <div>{m.team1.map(replaceNumbersWithNames).join("   /   ")}</div>
+                        <div className="text-center text-sm font-semibold mt-1 mb-1">--------</div>
+                        <div>{m.team2.map(replaceNumbersWithNames).join("   /   ")}</div>
                       </div>
-                    ))}
-                    {filteredRounds[currentRoundIndex].byes.length > 0 && (
-                      <div className="text-center text-sm text-gray-600 mt-1">
-                        <strong>Byes:</strong>{" "}
-                        {filteredRounds[currentRoundIndex].byes.map(replaceNumbersWithNames).join(", ")}
-                      </div>
-                    )}
-                  </div>
+                    </div>
+                  ))}
+                  {filteredRounds[currentRoundIndex].byes.length > 0 && (
+                    <div className="text-center text-sm text-gray-600 mt-1">
+                      <strong>Byes:</strong>{" "}
+                      {filteredRounds[currentRoundIndex].byes.map(replaceNumbersWithNames).join(", ")}
+                    </div>
+                  )}
+                </div>
 
-                  <div className="flex justify-between items-center mt-3">
-                    <button onClick={prevRound} disabled={currentRoundIndex === 0} className={`px-3 py-1 rounded text-white text-sm ${currentRoundIndex === 0 ? "bg-gray-300" : "bg-blue-600"}`}>⬅</button>
-                    <div className="text-xs text-gray-600">{currentRoundIndex + 1} / {filteredRounds.length}</div>
-                    <button onClick={nextRound} disabled={currentRoundIndex === filteredRounds.length - 1} className={`px-3 py-1 rounded text-white text-sm ${currentRoundIndex === filteredRounds.length - 1 ? "bg-gray-300" : "bg-blue-600"}`}>➡</button>
-                  </div>
-                </>
-              )}
-            </>
-          )}
+                <div className="flex justify-between items-center mt-3">
+                  <button onClick={prevRound} disabled={currentRoundIndex === 0} className={`px-3 py-1 rounded text-white text-sm ${currentRoundIndex === 0 ? "bg-gray-300" : "bg-blue-600"}`}>⬅</button>
+                  <div className="text-xs text-gray-600">{currentRoundIndex + 1} / {filteredRounds.length}</div>
+                  <button onClick={nextRound} disabled={currentRoundIndex === filteredRounds.length - 1} className={`px-3 py-1 rounded text-white text-sm ${currentRoundIndex === filteredRounds.length - 1 ? "bg-gray-300" : "bg-blue-600"}`}>➡</button>
+                </div>
+              </>
+            )}
+          </>
+        )}
 
-          {view === "matrix" && (
-            <>
-              {renderMatrix()}
-              <button onClick={() => setView("schedule")} className="mt-2 w-full bg-blue-600 text-white p-2 rounded text-sm">⬅ Return to Schedule</button>
-            </>
-          )}
-        </div>
+        {/* Matrix view */}
+        {view === "matrix" && (
+          <>
+            {renderMatrix()}
+            <button onClick={() => setView("schedule")} className="mt-2 w-full bg-blue-600 text-white p-2 rounded text-sm">⬅ Return to Schedule</button>
+          </>
+        )}
       </div>
-    );
+    </div>
+  );
 }
