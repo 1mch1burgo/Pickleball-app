@@ -4,28 +4,28 @@ import Papa from "papaparse";
 
 export default function App() {
     // Prevent Android Back Button from closing PWA
+
+ // --- Back Button "Press Twice to Exit" Logic ---
+const [exitToast, setExitToast] = useState(false);
+const lastBackPressRef = useRef(0);
+
 useEffect(() => {
-  // Ensure app has at least one history entry
-  window.history.pushState({ page: 1 }, "", "");
+  window.history.pushState({ pwa: true }, "");
 
-  const stopBackClose = () => {
-    window.history.pushState({ page: 1 }, "", "");
-  };
-
-  window.addEventListener("popstate", stopBackClose);
-
-  document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "hidden") {
-      setTimeout(() => {
-        window.history.pushState({ page: 1 }, "", "");
-      }, 10);
+  const handleBack = () => {
+    const now = Date.now();
+    if (now - lastBackPressRef.current < 1000) {
+      return; // allow exit
     }
-  });
-
-  // CLEANUP
-  return () => {
-    window.removeEventListener("popstate", stopBackClose);
+    setExitToast(true);
+    setTimeout(() => setExitToast(false), 1500);
+    if (navigator.vibrate) navigator.vibrate(100);
+    window.history.pushState({ pwa: true }, "");
+    lastBackPressRef.current = now;
   };
+
+  window.addEventListener("popstate", handleBack);
+  return () => window.removeEventListener("popstate", handleBack);
 }, []);
     
   const [csvData, setCsvData] = useState([]);
@@ -408,3 +408,8 @@ useEffect(() => {
     </div>
   );
 }
+{exitToast && (
+  <div className="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-black text-white text-sm px-4 py-2 rounded opacity-90 z-50">
+    Press back again to exit
+  </div>
+)}
