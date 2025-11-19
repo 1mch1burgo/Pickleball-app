@@ -6,12 +6,12 @@ export default function App() {
     // Prevent Android Back Button from closing PWA
 useEffect(() => {
   // Ensure app has at least one history entry
-  history.pushState({ page: 1 }, "", "");
+  window.history.pushState({ page: 1 }, "", "");
 
   const stopBackClose = () => {
-    // Android standalone mode fires popstate only once
-    // After that, Android tries to CLOSE the PWA.
-    history.pushState({ page: 1 }, "", "");
+    // Android standalone mode fires popstate only once,
+    // After that Android tries to close the PWA.
+    window.history.pushState({ page: 1 }, "", "");
   };
 
   window.addEventListener("popstate", stopBackClose);
@@ -19,13 +19,17 @@ useEffect(() => {
   document.addEventListener("visibilitychange", () => {
     // When Android tries to close the app, it triggers visibilitychange
     if (document.visibilityState === "hidden") {
-      // Immediately restore focus so the app doesn't close
+      // Immediately restore history so app does NOT close
       setTimeout(() => {
-        history.pushState({ page: 1 }, "", "");
+        window.history.pushState({ page: 1 }, "", "");
       }, 10);
     }
   });
 
+  return () => {
+    window.removeEventListener("popstate", stopBackClose);
+  };
+}, []);
   return () => {
     window.removeEventListener("popstate", stopBackClose);
   };
