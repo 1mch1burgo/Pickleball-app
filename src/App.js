@@ -5,27 +5,14 @@ import Papa from "papaparse";
 export default function App() {
   // Prevent Android Back Button from closing PWA
 useEffect(() => {
-  let lastBackPress = 0;
-
-  // Fill history stack with 3 dummy states
-  for (let i = 0; i < 3; i++) {
-    window.history.pushState({ dummy: i }, "", "");
-  }
+  // Ensure app has at least one history entry
+  window.history.pushState({ page: 1 }, "", "");
 
   const onBack = (e) => {
     e.preventDefault();
-    const now = Date.now();
-
-    if (now - lastBackPress < 1000) {
-      // Exit allowed
-      window.removeEventListener("popstate", onBack);
-      window.history.go(-3); // pop all dummy states
-    } else {
-      lastBackPress = now;
-      alert("Press back again quickly to exit");
-      // Push another dummy state to prevent closure
-      setTimeout(() => window.history.pushState({ dummy: 0 }, "", ""), 0);
-    }
+    alert("Any further press of the back button will close the app and you will lose your data.");
+    // Push a dummy state so app doesn’t close immediately
+    window.history.pushState({ page: 1 }, "", "");
   };
 
   window.addEventListener("popstate", onBack);
@@ -34,7 +21,6 @@ useEffect(() => {
     window.removeEventListener("popstate", onBack);
   };
 }, []);
-
   const [csvData, setCsvData] = useState([]);
   const [playersOptions, setPlayersOptions] = useState([]);
   const [courtsOptions, setCourtsOptions] = useState([]);
