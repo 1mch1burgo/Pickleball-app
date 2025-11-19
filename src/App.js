@@ -3,31 +3,34 @@ import React, { useEffect, useState, useRef } from "react";
 import Papa from "papaparse";
 
 export default function App() {
-  // -----------------------------
-  // Prevent Android Back Button from closing PWA
-  // -----------------------------
+  // --- BACK BUTTON CONFIRMATION ---
   useEffect(() => {
-    // Ensure app has at least one history entry
-    window.history.pushState({ page: 1 }, "", "");
+    // Push a dummy history entry on load
+    window.history.pushState({ page: "main" }, "", "");
 
-    const stopBackClose = (e) => {
-      e.preventDefault();
-      // Push another dummy state to prevent closing
-      window.history.pushState({ page: 1 }, "", "");
-      // Optional: show a message
-      // alert("Pressing back will not close the app. Use the Refresh button to start over.");
+    const handleBackButton = (e) => {
+      const confirmExit = window.confirm(
+        "Press OK to exit the app and lose unsaved data, or Cancel to stay."
+      );
+
+      if (confirmExit) {
+        // Allow default back behavior
+        window.removeEventListener("popstate", handleBackButton);
+        window.history.back();
+      } else {
+        // Cancel back press: restore dummy state
+        window.history.pushState({ page: "main" }, "", "");
+      }
     };
 
-    window.addEventListener("popstate", stopBackClose);
+    window.addEventListener("popstate", handleBackButton);
 
     return () => {
-      window.removeEventListener("popstate", stopBackClose);
+      window.removeEventListener("popstate", handleBackButton);
     };
   }, []);
 
-  // -----------------------------
-  // State
-  // -----------------------------
+  // --- STATE ---
   const [csvData, setCsvData] = useState([]);
   const [playersOptions, setPlayersOptions] = useState([]);
   const [courtsOptions, setCourtsOptions] = useState([]);
@@ -46,9 +49,7 @@ export default function App() {
   const touchStartXRef = useRef(null);
   const touchEndXRef = useRef(null);
 
-  // -----------------------------
-  // Load CSV
-  // -----------------------------
+  // --- LOAD CSV ---
   useEffect(() => {
     Papa.parse("/schedule.csv", {
       download: true,
@@ -64,9 +65,7 @@ export default function App() {
     });
   }, []);
 
-  // -----------------------------
-  // Prevent mobile overscroll / pull-to-refresh
-  // -----------------------------
+  // --- PREVENT OVERSCROLL / PULL-TO-REFRESH ---
   useEffect(() => {
     const prev = document.documentElement.style.overscrollBehavior;
     document.documentElement.style.overscrollBehavior = "none";
@@ -75,9 +74,7 @@ export default function App() {
     };
   }, []);
 
-  // -----------------------------
-  // Compute courts options
-  // -----------------------------
+  // --- COMPUTE COURTS OPTIONS ---
   useEffect(() => {
     if (!selectedPlayers) return;
     const rowsForPlayers = csvData.filter((r) => r.Players === String(selectedPlayers));
@@ -92,9 +89,7 @@ export default function App() {
     });
   }, [selectedPlayers, csvData]);
 
-  // -----------------------------
-  // Compute rounds options
-  // -----------------------------
+  // --- COMPUTE ROUNDS OPTIONS ---
   useEffect(() => {
     if (!selectedPlayers || !selectedCourts) return;
     const rows = csvData.filter(
@@ -105,9 +100,7 @@ export default function App() {
     setRoundsOptions(opts);
   }, [selectedPlayers, selectedCourts, csvData]);
 
-  // -----------------------------
-  // Extract matches and byes
-  // -----------------------------
+  // --- EXTRACT MATCHES & BYES ---
   const extractMatches = (row) => {
     const keys = Object.keys(row);
     const courtNums = new Set();
@@ -139,9 +132,7 @@ export default function App() {
     return byes;
   };
 
-  // -----------------------------
-  // Build filtered rounds
-  // -----------------------------
+  // --- BUILD FILTERED ROUNDS ---
   const buildFilteredRounds = () => {
     if (!selectedPlayers || !selectedCourts || !selectedNumRounds) return;
     const rows = csvData.filter(
@@ -165,9 +156,6 @@ export default function App() {
     return name && name.trim() !== "" ? name.trim() : String(idx);
   };
 
-  // -----------------------------
-  // Refresh (clears all)
-  // -----------------------------
   const handleRefresh = () => {
     if (window.confirm("Do you really want to refresh? This will lose any unsaved data.")) {
       window.location.reload();
@@ -176,9 +164,7 @@ export default function App() {
 
   const maxPlayerCount = parseInt(selectedPlayers || 0, 10);
 
-  // -----------------------------
-  // Round navigation
-  // -----------------------------
+  // --- ROUND NAVIGATION ---
   const nextRound = () => {
     if (currentRoundIndex < filteredRounds.length - 1) setCurrentRoundIndex((i) => i + 1);
   };
@@ -186,9 +172,7 @@ export default function App() {
     if (currentRoundIndex > 0) setCurrentRoundIndex((i) => i - 1);
   };
 
-  // -----------------------------
-  // Swipe navigation
-  // -----------------------------
+  // --- TOUCH SWIPES ---
   const onTouchStart = (e) => { touchStartXRef.current = e.touches?.[0]?.clientX ?? null; };
   const onTouchMove = (e) => { touchEndXRef.current = e.touches?.[0]?.clientX ?? null; };
   const onTouchEnd = () => {
@@ -201,9 +185,7 @@ export default function App() {
     touchStartXRef.current = null; touchEndXRef.current = null;
   };
 
-  // -----------------------------
-  // Matrix logic
-  // -----------------------------
+  // --- MATRIX LOGIC ---
   const renderMatrix = () => {
     if (!filteredRounds.length) return null;
     const names = playerNames.map((p, i) => p || String(i + 1));
@@ -213,12 +195,10 @@ export default function App() {
     const byesCount = Array(n).fill(0);
 
     filteredRounds.forEach((round) => {
-      // Count byes
       round.byes.forEach((b) => {
         const idx = parseInt(b, 10) - 1;
         if (idx >= 0 && idx < n) byesCount[idx]++;
       });
-      // Count teammates in blue, sum total times on court with anyone
       round.matches.forEach((m) => {
         const all = [...m.team1, ...m.team2].map((x) => parseInt(x, 10) - 1);
         for (let i = 0; i < all.length; i++) {
@@ -279,9 +259,7 @@ export default function App() {
 
   const genDisabled = !selectedPlayers || !selectedCourts || !selectedNumRounds;
 
-  // -----------------------------
-  // Render
-  // -----------------------------
+  // --- RENDER ---
   return (
     <div className="min-h-screen bg-gray-100 py-3 px-3 relative">
       <div className="mx-auto max-w-sm bg-white rounded-2xl shadow p-3"
@@ -408,16 +386,16 @@ export default function App() {
                     </div>
                   ))}
                   {filteredRounds[currentRoundIndex].byes.length > 0 && (
-                    <div className="text-sm text-center text-gray-600 mb-2">
-                      Byes: {filteredRounds[currentRoundIndex].byes.map(replaceNumbersWithNames).join(", ")}
+                    <div className="text-center text-sm text-gray-600 mt-1">
+                      <strong>Byes:</strong>{" "}
+                      {filteredRounds[currentRoundIndex].byes.map(replaceNumbersWithNames).join(", ")}
                     </div>
                   )}
                 </div>
 
-                {/* Round Navigation */}
-                <div className="flex justify-between mt-2">
-                  <button onClick={prevRound} disabled={currentRoundIndex===0} className="px-3 py-1 bg-gray-300 rounded text-sm">◀ Prev</button>
-                  <button onClick={nextRound} disabled={currentRoundIndex===filteredRounds.length-1} className="px-3 py-1 bg-gray-300 rounded text-sm">Next ▶</button>
+                <div className="flex justify-between items-center mt-3">
+                  <button className="px-3 py-1 bg-gray-300 text-gray-700 rounded text-sm" onClick={prevRound} disabled={currentRoundIndex===0}>← Prev</button>
+                  <button className="px-3 py-1 bg-gray-300 text-gray-700 rounded text-sm" onClick={nextRound} disabled={currentRoundIndex===filteredRounds.length-1}>Next →</button>
                 </div>
               </>
             )}
@@ -426,9 +404,9 @@ export default function App() {
 
         {view === "matrix" && (
           <>
-            <div className="flex justify-between mb-2">
-              <button onClick={() => setView("schedule")} className="text-xs text-blue-600 underline">← Back to Schedule</button>
-              <button onClick={handleRefresh} className="text-xs bg-red-500 text-white px-2 py-1 rounded shadow">🔄 Refresh</button>
+            <div className="flex justify-between items-center mb-2">
+              <button className="text-xs text-blue-600 underline" onClick={() => setView("schedule")}>← Back to Schedule</button>
+              <button className="text-xs bg-red-500 text-white px-2 py-1 rounded shadow" onClick={handleRefresh}>🔄 Refresh</button>
             </div>
             {renderMatrix()}
           </>
