@@ -3,23 +3,20 @@ import React, { useEffect, useState, useRef } from "react";
 import Papa from "papaparse";
 
 export default function App() {
-
-// Inside your App component, at the top
+// Inside your App component
 const [lastBackPress, setLastBackPress] = useState(0);
 
 useEffect(() => {
   const handleBackButton = (e) => {
     e.preventDefault();
-
     const now = Date.now();
     if (now - lastBackPress < 2000) {
-      // Exit the app (allow default behavior)
+      // Exit the app
       window.removeEventListener("popstate", handleBackButton);
-      history.back(); // Actually exit
+      window.history.back(); // Use window.history instead of plain 'history'
     } else {
-      // First back press → show message
       setLastBackPress(now);
-      alert("Press back again to exit"); // You can replace with a nicer toast
+      alert("Press back again to exit"); // Simple fallback message
       // Push a new state to prevent immediate exit
       window.history.pushState(null, "", window.location.href);
     }
@@ -31,6 +28,7 @@ useEffect(() => {
 
   return () => window.removeEventListener("popstate", handleBackButton);
 }, [lastBackPress]);
+
   
   // --- CSV & Schedule State ---
   const [csvData, setCsvData] = useState([]);
