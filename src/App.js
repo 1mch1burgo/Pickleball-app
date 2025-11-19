@@ -4,20 +4,30 @@ import Papa from "papaparse";
 
 export default function App() {
     // Prevent Android Back Button from closing PWA
- useEffect(() => {
-  const blockBack = () => {
-    // Always add another fake history entry so back button never exits
-    window.history.pushState(null, "", window.location.href);
+useEffect(() => {
+  // Ensure app has at least one history entry
+  history.pushState({ page: 1 }, "", "");
+
+  const stopBackClose = () => {
+    // Android standalone mode fires popstate only once
+    // After that, Android tries to CLOSE the PWA.
+    history.pushState({ page: 1 }, "", "");
   };
 
-  // Start with a fake entry
-  window.history.pushState(null, "", window.location.href);
+  window.addEventListener("popstate", stopBackClose);
 
-  // Whenever back is pressed, push another entry
-  window.addEventListener("popstate", blockBack);
+  document.addEventListener("visibilitychange", () => {
+    // When Android tries to close the app, it triggers visibilitychange
+    if (document.visibilityState === "hidden") {
+      // Immediately restore focus so the app doesn't close
+      setTimeout(() => {
+        history.pushState({ page: 1 }, "", "");
+      }, 10);
+    }
+  });
 
   return () => {
-    window.removeEventListener("popstate", blockBack);
+    window.removeEventListener("popstate", stopBackClose);
   };
 }, []);
 
