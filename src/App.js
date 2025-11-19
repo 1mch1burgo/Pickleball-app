@@ -4,33 +4,32 @@ import Papa from "papaparse";
 
 export default function App() {
   // Prevent Android Back Button from closing PWA
-  useEffect(() => {
-    let lastBackPress = 0;
+useEffect(() => {
+  let lastBackPress = 0;
 
-    // Ensure app has at least one history entry
-    window.history.pushState({ page: 1 }, "", "");
-
-    const handleBackButton = () => {
-      const now = Date.now();
-      if (now - lastBackPress < 1000) {
-        // Exit the app: allow normal behavior
-        window.removeEventListener("popstate", handleBackButton);
-        window.history.back();
-      } else {
-        lastBackPress = now;
-        // Show message
-        alert("Press back again within 1 second to exit");
-        // Push a dummy state so back doesn't close app
-        window.history.pushState({ page: 1 }, "", "");
-      }
-    };
-
-    window.addEventListener("popstate", handleBackButton);
-
-    return () => {
+  const handleBackButton = (e) => {
+    e.preventDefault();
+    const now = Date.now();
+    if (now - lastBackPress < 1000) {
+      // Exit the app by going back in history
       window.removeEventListener("popstate", handleBackButton);
-    };
-  }, []);
+      window.history.back();
+    } else {
+      lastBackPress = now;
+      alert("Press back again within 1 second to exit");
+      // Push dummy state so back button doesn't close app
+      window.history.pushState({ page: 1 }, "", "");
+    }
+  };
+
+  // Push initial state to prevent closing
+  window.history.pushState({ page: 1 }, "", "");
+  window.addEventListener("popstate", handleBackButton);
+
+  return () => {
+    window.removeEventListener("popstate", handleBackButton);
+  };
+}, []);
 
   const [csvData, setCsvData] = useState([]);
   const [playersOptions, setPlayersOptions] = useState([]);
