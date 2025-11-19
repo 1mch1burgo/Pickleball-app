@@ -3,24 +3,31 @@ import React, { useEffect, useState, useRef } from "react";
 import Papa from "papaparse";
 
 export default function App() {
+  // -----------------------------
   // Prevent Android Back Button from closing PWA
-useEffect(() => {
-  // Ensure app has at least one history entry
-  window.history.pushState({ page: 1 }, "", "");
-
-  const onBack = (e) => {
-    e.preventDefault();
-    alert("Any further press of the back button will close the app and you will lose your data.");
-    // Push a dummy state so app doesn’t close immediately
+  // -----------------------------
+  useEffect(() => {
+    // Ensure app has at least one history entry
     window.history.pushState({ page: 1 }, "", "");
-  };
 
-  window.addEventListener("popstate", onBack);
+    const stopBackClose = (e) => {
+      e.preventDefault();
+      // Push another dummy state to prevent closing
+      window.history.pushState({ page: 1 }, "", "");
+      // Optional: show a message
+      // alert("Pressing back will not close the app. Use the Refresh button to start over.");
+    };
 
-  return () => {
-    window.removeEventListener("popstate", onBack);
-  };
-}, []);
+    window.addEventListener("popstate", stopBackClose);
+
+    return () => {
+      window.removeEventListener("popstate", stopBackClose);
+    };
+  }, []);
+
+  // -----------------------------
+  // State
+  // -----------------------------
   const [csvData, setCsvData] = useState([]);
   const [playersOptions, setPlayersOptions] = useState([]);
   const [courtsOptions, setCourtsOptions] = useState([]);
@@ -39,7 +46,9 @@ useEffect(() => {
   const touchStartXRef = useRef(null);
   const touchEndXRef = useRef(null);
 
+  // -----------------------------
   // Load CSV
+  // -----------------------------
   useEffect(() => {
     Papa.parse("/schedule.csv", {
       download: true,
@@ -55,7 +64,9 @@ useEffect(() => {
     });
   }, []);
 
+  // -----------------------------
   // Prevent mobile overscroll / pull-to-refresh
+  // -----------------------------
   useEffect(() => {
     const prev = document.documentElement.style.overscrollBehavior;
     document.documentElement.style.overscrollBehavior = "none";
@@ -64,7 +75,9 @@ useEffect(() => {
     };
   }, []);
 
+  // -----------------------------
   // Compute courts options
+  // -----------------------------
   useEffect(() => {
     if (!selectedPlayers) return;
     const rowsForPlayers = csvData.filter((r) => r.Players === String(selectedPlayers));
@@ -79,7 +92,9 @@ useEffect(() => {
     });
   }, [selectedPlayers, csvData]);
 
+  // -----------------------------
   // Compute rounds options
+  // -----------------------------
   useEffect(() => {
     if (!selectedPlayers || !selectedCourts) return;
     const rows = csvData.filter(
@@ -90,7 +105,9 @@ useEffect(() => {
     setRoundsOptions(opts);
   }, [selectedPlayers, selectedCourts, csvData]);
 
+  // -----------------------------
   // Extract matches and byes
+  // -----------------------------
   const extractMatches = (row) => {
     const keys = Object.keys(row);
     const courtNums = new Set();
@@ -122,6 +139,9 @@ useEffect(() => {
     return byes;
   };
 
+  // -----------------------------
+  // Build filtered rounds
+  // -----------------------------
   const buildFilteredRounds = () => {
     if (!selectedPlayers || !selectedCourts || !selectedNumRounds) return;
     const rows = csvData.filter(
@@ -145,6 +165,9 @@ useEffect(() => {
     return name && name.trim() !== "" ? name.trim() : String(idx);
   };
 
+  // -----------------------------
+  // Refresh (clears all)
+  // -----------------------------
   const handleRefresh = () => {
     if (window.confirm("Do you really want to refresh? This will lose any unsaved data.")) {
       window.location.reload();
@@ -153,6 +176,9 @@ useEffect(() => {
 
   const maxPlayerCount = parseInt(selectedPlayers || 0, 10);
 
+  // -----------------------------
+  // Round navigation
+  // -----------------------------
   const nextRound = () => {
     if (currentRoundIndex < filteredRounds.length - 1) setCurrentRoundIndex((i) => i + 1);
   };
@@ -160,6 +186,9 @@ useEffect(() => {
     if (currentRoundIndex > 0) setCurrentRoundIndex((i) => i - 1);
   };
 
+  // -----------------------------
+  // Swipe navigation
+  // -----------------------------
   const onTouchStart = (e) => { touchStartXRef.current = e.touches?.[0]?.clientX ?? null; };
   const onTouchMove = (e) => { touchEndXRef.current = e.touches?.[0]?.clientX ?? null; };
   const onTouchEnd = () => {
@@ -172,7 +201,9 @@ useEffect(() => {
     touchStartXRef.current = null; touchEndXRef.current = null;
   };
 
+  // -----------------------------
   // Matrix logic
+  // -----------------------------
   const renderMatrix = () => {
     if (!filteredRounds.length) return null;
     const names = playerNames.map((p, i) => p || String(i + 1));
@@ -225,7 +256,10 @@ useEffect(() => {
                   return (
                     <td
                       key={j}
-                      className={`border px-1 py-1 text-center ${i === j ? "bg-gray-400" : isTeammate ? "bg-blue-300" : ""}`}
+                      className={`border px-1 py-1 text-center ${
+                        i === j ? "bg-gray-400" :
+                        isTeammate ? "bg-blue-300" : ""
+                      }`}
                     >
                       {i === j ? "" : val>=0 ? val : ""}
                     </td>
@@ -245,6 +279,9 @@ useEffect(() => {
 
   const genDisabled = !selectedPlayers || !selectedCourts || !selectedNumRounds;
 
+  // -----------------------------
+  // Render
+  // -----------------------------
   return (
     <div className="min-h-screen bg-gray-100 py-3 px-3 relative">
       <div className="mx-auto max-w-sm bg-white rounded-2xl shadow p-3"
@@ -371,17 +408,16 @@ useEffect(() => {
                     </div>
                   ))}
                   {filteredRounds[currentRoundIndex].byes.length > 0 && (
-                    <div className="text-center text-sm text-gray-600 mt-1">
-                      <strong>Byes:</strong>{" "}
-                      {filteredRounds[currentRoundIndex].byes.map(replaceNumbersWithNames).join(", ")}
+                    <div className="text-sm text-center text-gray-600 mb-2">
+                      Byes: {filteredRounds[currentRoundIndex].byes.map(replaceNumbersWithNames).join(", ")}
                     </div>
                   )}
                 </div>
 
-                <div className="flex justify-between items-center mt-3">
-                  <button onClick={prevRound} disabled={currentRoundIndex === 0} className={`px-3 py-1 rounded text-white text-sm ${currentRoundIndex === 0 ? "bg-gray-300" : "bg-blue-600"}`}>⬅</button>
-                  <div className="text-xs text-gray-600">{currentRoundIndex + 1} / {filteredRounds.length}</div>
-                  <button onClick={nextRound} disabled={currentRoundIndex === filteredRounds.length - 1} className={`px-3 py-1 rounded text-white text-sm ${currentRoundIndex === filteredRounds.length - 1 ? "bg-gray-300" : "bg-blue-600"}`}>➡</button>
+                {/* Round Navigation */}
+                <div className="flex justify-between mt-2">
+                  <button onClick={prevRound} disabled={currentRoundIndex===0} className="px-3 py-1 bg-gray-300 rounded text-sm">◀ Prev</button>
+                  <button onClick={nextRound} disabled={currentRoundIndex===filteredRounds.length-1} className="px-3 py-1 bg-gray-300 rounded text-sm">Next ▶</button>
                 </div>
               </>
             )}
@@ -390,8 +426,11 @@ useEffect(() => {
 
         {view === "matrix" && (
           <>
+            <div className="flex justify-between mb-2">
+              <button onClick={() => setView("schedule")} className="text-xs text-blue-600 underline">← Back to Schedule</button>
+              <button onClick={handleRefresh} className="text-xs bg-red-500 text-white px-2 py-1 rounded shadow">🔄 Refresh</button>
+            </div>
             {renderMatrix()}
-            <button onClick={() => setView("schedule")} className="mt-2 w-full bg-blue-600 text-white p-2 rounded text-sm">⬅ Return to Schedule</button>
           </>
         )}
       </div>
