@@ -4,19 +4,22 @@ import Papa from "papaparse";
 
 export default function App() {
     // Prevent Android Back Button from closing PWA
-  useEffect(() => {
-    const blockBack = (e) => {
-      // Prevent leaving the PWA
-      e.preventDefault();
-      window.history.pushState(null, "", window.location.href);
-    };
-
-    // Push an initial state so back button has "nowhere to go"
+ useEffect(() => {
+  const blockBack = () => {
+    // Always add another fake history entry so back button never exits
     window.history.pushState(null, "", window.location.href);
-    window.addEventListener("popstate", blockBack);
+  };
 
-    return () => window.removeEventListener("popstate", blockBack);
-  }, []);
+  // Start with a fake entry
+  window.history.pushState(null, "", window.location.href);
+
+  // Whenever back is pressed, push another entry
+  window.addEventListener("popstate", blockBack);
+
+  return () => {
+    window.removeEventListener("popstate", blockBack);
+  };
+}, []);
 
   const [csvData, setCsvData] = useState([]);
   const [playersOptions, setPlayersOptions] = useState([]);
