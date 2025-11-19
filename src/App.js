@@ -35,7 +35,10 @@ export default function App() {
     const [selectedCourts, setSelectedCourts] = useState("");
     const [selectedNumRounds, setSelectedNumRounds] = useState("");
 
-    const [playerNames, setPlayerNames] = useState([]);
+    const [playerNames, setPlayerNames] = useState(() => {
+  const saved = localStorage.getItem("playerNames");
+  return saved ? JSON.parse(saved) : [];
+});
     const previousNamesRef = useRef([]);
     const [filteredRounds, setFilteredRounds] = useState([]);
     const [currentRoundIndex, setCurrentRoundIndex] = useState(0);
@@ -78,8 +81,8 @@ export default function App() {
 
       const needed = parseInt(selectedPlayers, 10) || 0;
 
-      // Load saved player names from sessionStorage
-      const saved = sessionStorage.getItem("playerNames");
+      // Load saved player names from localStorage
+const saved = localStorage.getItem("playerNames");
       let names = [];
       if (saved) {
         const parsed = JSON.parse(saved);
@@ -92,7 +95,7 @@ export default function App() {
 
     // Save player names on every change
     useEffect(() => {
-      sessionStorage.setItem("playerNames", JSON.stringify(playerNames));
+     localStorage.setItem("playerNames", JSON.stringify(playerNames));
     }, [playerNames]);
 
     // Compute rounds options
