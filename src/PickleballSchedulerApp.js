@@ -1,4 +1,7 @@
-import React, { useState, useEffect } from "react";
+import { useRef, useState as usePrintState } from "react";
+import { useReactToPrint } from "react-to-print";
+import PrintableSchedule from "./PrintableSchedule";
+import "./print.css";
 import Papa from "papaparse";
 import scheduleData from "./schedule.csv";
 
@@ -9,6 +12,30 @@ export default function PickleballSchedulerApp() {
   const [rounds, setRounds] = useState("");
   const [step, setStep] = useState(1);
   const [currentRound, setCurrentRound] = useState(1);
+const printRef = useRef();
+const [showNames, setShowNames] = usePrintState(false);
+
+const maxCourts = csvData.length
+  ? Math.max(
+      ...csvData
+        .filter(r => parseInt(r.Players) === parseInt(numPlayers))
+        .map(r =>
+          Object.keys(r).filter(k => k.match(/^\d+[a-d]$/))
+            .map(k => parseInt(k))
+            .length / 4
+        )
+    )
+  : 0;
+
+const handlePrint = useReactToPrint({
+  content: () => printRef.current,
+  onBeforePrint: () => {
+    document.body.classList.toggle("landscape", maxCourts >= 4);
+  },
+  onAfterPrint: () => {
+    document.body.classList.remove("landscape");
+  }
+});
 
   useEffect(() => {
     Papa.parse(scheduleData, {
@@ -150,7 +177,35 @@ export default function PickleballSchedulerApp() {
               >
                 Next
               </button>
-            </div>
+            <div className="mt-6 border-t pt-4 space-y-2">
+  <label className="flex items-center gap-2">
+    <input
+      type="checkbox"
+      checked={showNames}
+      onChange={e => setShowNames(e.target.checked)}
+    />
+    Include player names
+  </label>
+
+  <button
+    onClick={handlePrint}
+    className="bg-green-600 text-white px-4 py-2 rounded w-full"
+  >
+    🖨 Print full schedule
+  </button>
+</div>
+
+<div style={{ display: "none" }}>
+  <PrintableSchedule
+    ref={printRef}
+    csvData={csvData}
+    numPlayers={numPlayers}
+    rounds={rounds}
+    playerNames={playerNames}
+    showNames={showNames}
+  />
+</div>
+</div>
           </div>
         )}
       </div>
