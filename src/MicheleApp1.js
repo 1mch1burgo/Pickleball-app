@@ -1,4 +1,7 @@
-import React, { useEffect, useState, useRef } from "react";
+import { useRef, useState as usePrintState } from "react";
+import { useReactToPrint } from "react-to-print";
+import PrintableSchedule from "./PrintableSchedule";
+import "./print.css";
 import Papa from "papaparse";
 
 /**
