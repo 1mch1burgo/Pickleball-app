@@ -482,14 +482,15 @@ export default function App() {
         )}
       </div>
   <div style={{ position: "absolute", left: "-9999px", top: 0 }}>
-  <PrintableSchedule
-    ref={printRef}
-    csvData={csvData}
-    numPlayers={selectedPlayers}
-    rounds={selectedNumRounds}
-    playerNames={playerNames}
-    showNames={showNames}
-  />
+ <PrintableSchedule
+  ref={printRef}
+  csvData={csvData}
+  numPlayers={parseInt(selectedPlayers, 10)}
+  rounds={parseInt(selectedNumRounds, 10)}
+  playerNames={playerNames}
+  showNames={showNames}
+console.log("PRINTABLE DATA:", { csvData, numPlayers, rounds, playerNames, showNames });
+/>
 </div>
       </div>
   );
