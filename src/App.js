@@ -1,6 +1,8 @@
 // App.js
 import React, { useEffect, useState, useRef } from "react";
 import Papa from "papaparse";
+import PrintableSchedule from "./PrintableSchedule";
+import { useReactToPrint } from "react-to-print";
 
 export default function App() {
   // Prevent Android Back Button from closing PWA
@@ -28,7 +30,13 @@ export default function App() {
   const [playersOptions, setPlayersOptions] = useState([]);
   const [courtsOptions, setCourtsOptions] = useState([]);
   const [roundsOptions, setRoundsOptions] = useState([]);
+  const printRef = useRef();
+  const [showNames, setShowNames] = useState(true);
 
+  const handlePrint = useReactToPrint({
+    content: () => printRef.current,
+    documentTitle: "Pickleball Schedule",
+      });
   const [selectedPlayers, setSelectedPlayers] = useState(
     localStorage.getItem("selectedPlayers") || ""
   );
@@ -383,6 +391,46 @@ export default function App() {
         {view === "schedule" && (
           <>
             <div className="flex justify-between items-start mb-2">
+  <div className="flex items-start gap-3">
+    <button
+      className="text-xs bg-red-500 text-white px-2 py-1 rounded shadow"
+      onClick={handleRefresh}
+    >
+      🔄 Refresh
+    </button>
+
+    <button
+      className="text-xs text-blue-600 underline"
+      onClick={() => setView("matrix")}
+    >
+      📊 Matrix
+    </button>
+
+    {/* PRINT CONTROLS */}
+    <button
+      className="text-xs text-green-700 underline"
+      onClick={handlePrint}
+    >
+      🖨 Print
+    </button>
+
+    <label className="text-xs flex items-center gap-1 text-gray-700">
+      <input
+        type="checkbox"
+        checked={showNames}
+        onChange={(e) => setShowNames(e.target.checked)}
+      />
+      Include names
+    </label>
+  </div>
+
+  <button
+    className="text-xs text-blue-600 underline"
+    onClick={() => setView("input")}
+  >
+    ✏️ Edit
+  </button>
+</div>
               <div className="flex items-start gap-3">
                 <button className="text-xs bg-red-500 text-white px-2 py-1 rounded shadow" onClick={handleRefresh}>🔄 Refresh</button>
                 <button className="text-xs text-blue-600 underline" onClick={() => setView("matrix")}>📊 Matrix</button>
@@ -436,6 +484,16 @@ export default function App() {
           </>
         )}
       </div>
-    </div>
+   <div style={{ display: "none" }}>
+  <PrintableSchedule
+    ref={printRef}
+    csvData={csvData}
+    numPlayers={selectedPlayers}
+    rounds={selectedNumRounds}
+    playerNames={playerNames}
+    showNames={showNames}
+  />
+</div>
+      </div>
   );
 }
