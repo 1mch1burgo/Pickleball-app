@@ -207,16 +207,16 @@ const handlePrint = useReactToPrint({
     </div>
 
     {/* Hidden PrintableSchedule for printing */}
-    <div style={{ display: "none" }}>
-      <PrintableSchedule
-        ref={printRef}
-        csvData={csvData}
-        numPlayers={numPlayers}
-        rounds={rounds}
-        playerNames={playerNames}
-        showNames={showNames}
-      />
-    </div>
+   <div style={{ position: "absolute", top: "-9999px", left: "-9999px" }}>
+  <PrintableSchedule
+    ref={printRef}
+    csvData={csvData}
+    numPlayers={numPlayers}
+    rounds={rounds}
+    playerNames={playerNames}
+    showNames={showNames}
+  />
+</div>
   </div>
 )}
 
