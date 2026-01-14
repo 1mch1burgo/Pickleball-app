@@ -30,7 +30,7 @@ export default function App() {
   const [playersOptions, setPlayersOptions] = useState([]);
   const [courtsOptions, setCourtsOptions] = useState([]);
   const [roundsOptions, setRoundsOptions] = useState([]);
-  const printRef = useRef();
+  const printRef = useRef(null);
   const [showNames, setShowNames] = useState(true);
 
   const handlePrint = useReactToPrint({
