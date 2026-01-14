@@ -156,16 +156,17 @@ const handlePrint = useReactToPrint({
           </div>
         )}
 
-       {step === 3 && (
+      {step === 3 && (
   <div className="space-y-6">
+    {/* Round header */}
     <h2 className="text-lg font-bold text-center">
       Round {currentRound} of {rounds}
     </h2>
 
-    {/* Render current round schedule */}
+    {/* Render the current round schedule */}
     {renderRound(currentRound)}
 
-    {/* Navigation buttons */}
+    {/* Round navigation */}
     <div className="flex justify-between mt-4">
       <button
         onClick={() => setCurrentRound((r) => Math.max(1, r - 1))}
@@ -174,6 +175,7 @@ const handlePrint = useReactToPrint({
       >
         Previous
       </button>
+
       <button
         onClick={() => setCurrentRound((r) => Math.min(Number(rounds), r + 1))}
         disabled={currentRound >= Number(rounds)}
@@ -183,40 +185,39 @@ const handlePrint = useReactToPrint({
       </button>
     </div>
 
-    {/* Print options */}
+    {/* Print controls */}
     <div className="mt-6 border-t pt-4 space-y-2">
-  <label className="flex items-center gap-2">
-    <input
-      type="checkbox"
-      checked={showNames}
-      onChange={e => setShowNames(e.target.checked)}
-    />
-    Include player names
-  </label>
+      <label className="flex items-center gap-2">
+        <input
+          type="checkbox"
+          checked={showNames}
+          onChange={(e) => setShowNames(e.target.checked)}
+        />
+        Include player names
+      </label>
 
-  <button
-    onClick={handlePrint}
-    className="bg-green-600 text-white px-4 py-2 rounded w-full"
-  >
-    🖨 Print full schedule
-  </button>
-</div>
-
-<div style={{ display: "none" }}>
-  <PrintableSchedule
-    ref={printRef}
-    csvData={csvData}
-    numPlayers={numPlayers}
-    rounds={rounds}
-    playerNames={playerNames}
-    showNames={showNames}
-  />
-</div>
-</div>
-          </div>
-        )}
-      </div>
+      <button
+        onClick={handlePrint}
+        className="bg-green-600 text-white px-4 py-2 rounded w-full"
+      >
+        🖨 Print full schedule
+      </button>
     </div>
-  );
-}
 
+    {/* Hidden PrintableSchedule for printing */}
+    <div style={{ display: "none" }}>
+      <PrintableSchedule
+        ref={printRef}
+        csvData={csvData}
+        numPlayers={numPlayers}
+        rounds={rounds}
+        playerNames={playerNames}
+        showNames={showNames}
+      />
+    </div>
+  </div>
+)}
+
+/* End of main container div */
+</div>
+</div>
