@@ -187,17 +187,8 @@ const handlePrint = useReactToPrint({
       </button>
     </div>
 
-    {/* Print controls */}
-    <div className="mt-6 border-t pt-4 space-y-2">
-      <label className="flex items-center gap-2">
-        <input
-          type="checkbox"
-          checked={showNames}
-          onChange={(e) => setShowNames(e.target.checked)}
-        />
-        Include player names
-      </label>
-
+    {/* Print button */}
+    <div className="mt-6">
       <button
         onClick={handlePrint}
         className="bg-green-600 text-white px-4 py-2 rounded w-full"
@@ -206,17 +197,17 @@ const handlePrint = useReactToPrint({
       </button>
     </div>
 
-    {/* Hidden PrintableSchedule for printing */}
-   <div style={{ position: "absolute", top: "-9999px", left: "-9999px" }}>
-  <PrintableSchedule
-    ref={printRef}
-    csvData={csvData}
-    numPlayers={numPlayers}
-    rounds={rounds}
-    playerNames={playerNames}
-    showNames={showNames}
-  />
-</div>
+    {/* Hidden PrintableSchedule for react-to-print */}
+    <div style={{ position: "absolute", top: "-9999px", left: "-9999px" }}>
+      <PrintableSchedule
+        ref={printRef}
+        csvData={csvData}
+        numPlayers={numPlayers}
+        rounds={rounds}
+        playerNames={playerNames}
+        showNames={showNames}
+      />
+    </div>
   </div>
 )}
 
