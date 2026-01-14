@@ -1,21 +1,33 @@
 // App.js
 import React, { useEffect, useState, useRef } from "react";
 import Papa from "papaparse";
-import PrintableSchedule from "./PrintableSchedule";
-import { useReactToPrint } from "react-to-print";
 
 export default function App() {
-  const printRef = useRef(null); // <-- top level, outside of useEffect
+  // Prevent Android Back Button from closing PWA
+  useEffect(() => {
+    window.history.pushState({ page: 1 }, "", "");
+    const stopBackClose = () => {
+      window.history.pushState({ page: 1 }, "", "");
+    };
+    window.addEventListener("popstate", stopBackClose);
+
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "hidden") {
+        setTimeout(() => {
+          window.history.pushState({ page: 1 }, "", "");
+        }, 10);
+      }
+    });
+
+    return () => {
+      window.removeEventListener("popstate", stopBackClose);
+    };
+  }, []);
+
   const [csvData, setCsvData] = useState([]);
   const [playersOptions, setPlayersOptions] = useState([]);
   const [courtsOptions, setCourtsOptions] = useState([]);
   const [roundsOptions, setRoundsOptions] = useState([]);
-  const [showNames, setShowNames] = useState(true);
-
-  const handlePrint = useReactToPrint({
-    content: () => printRef.current,
-    documentTitle: "Pickleball Schedule",
-  });
 
   const [selectedPlayers, setSelectedPlayers] = useState(
     localStorage.getItem("selectedPlayers") || ""
@@ -34,35 +46,9 @@ export default function App() {
   const [filteredRounds, setFilteredRounds] = useState([]);
   const [currentRoundIndex, setCurrentRoundIndex] = useState(0);
   const [view, setView] = useState("input"); // input | schedule | matrix
+
   const touchStartXRef = useRef(null);
   const touchEndXRef = useRef(null);
-
-  // Prevent Android Back Button from closing PWA
-  useEffect(() => {
-    window.history.pushState({ page: 1 }, "", "");
-    const stopBackClose = () => {
-      window.history.pushState({ page: 1 }, "", "");
-    };
-    window.addEventListener("popstate", stopBackClose);
-
-    document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "hidden") {
-        setTimeout(() => {
-          window.history.pushState({ page: 1 }, "", "");
-        }, 10);
-      }
-    });
-console.log("PRINTABLE DATA:", {
-  csvData,
-  numPlayers: parseInt(selectedPlayers, 10),
-  rounds: parseInt(selectedNumRounds, 10),
-  playerNames,
-  showNames
-});
-    return () => {
-      window.removeEventListener("popstate", stopBackClose);
-    };
-  }, []);
 
   // Save all state to localStorage whenever it changes
   useEffect(() => {
@@ -397,47 +383,13 @@ console.log("PRINTABLE DATA:", {
         {view === "schedule" && (
           <>
             <div className="flex justify-between items-start mb-2">
-  <div className="flex items-start gap-3">
-    <button
-      className="text-xs bg-red-500 text-white px-2 py-1 rounded shadow"
-      onClick={handleRefresh}
-    >
-      🔄 Refresh
-    </button>
+              <div className="flex items-start gap-3">
+                <button className="text-xs bg-red-500 text-white px-2 py-1 rounded shadow" onClick={handleRefresh}>🔄 Refresh</button>
+                <button className="text-xs text-blue-600 underline" onClick={() => setView("matrix")}>📊 Matrix</button>
+              </div>
+              <button className="text-xs text-blue-600 underline" onClick={() => setView("input")}>✏️ Edit</button>
+            </div>
 
-    <button
-      className="text-xs text-blue-600 underline"
-      onClick={() => setView("matrix")}
-    >
-      📊 Matrix
-    </button>
-
-    {/* PRINT CONTROLS */}
-<button
-  className="text-xs text-green-700 underline"
-  onClick={handlePrint}
->
-  🖨 Print
-</button>
-
-    <label className="text-xs flex items-center gap-1 text-gray-700">
-      <input
-        type="checkbox"
-        checked={showNames}
-        onChange={(e) => setShowNames(e.target.checked)}
-      />
-      Include names
-    </label>
-  </div>
-
-  <button
-    className="text-xs text-blue-600 underline"
-    onClick={() => setView("input")}
-  >
-    ✏️ Edit
-  </button>
-</div>
-             
             {filteredRounds.length === 0 ? (
               <p className="text-sm text-center text-gray-500">No rounds available.</p>
             ) : (
@@ -476,38 +428,13 @@ console.log("PRINTABLE DATA:", {
           </>
         )}
 
-               {/* Matrix view */}
+        {/* Matrix view */}
         {view === "matrix" && (
           <>
             {renderMatrix()}
-            <button
-              onClick={() => setView("schedule")}
-              className="mt-2 w-full bg-blue-600 text-white p-2 rounded text-sm"
-            >
-              ⬅ Return to Schedule
-            </button>
+            <button onClick={() => setView("schedule")} className="mt-2 w-full bg-blue-600 text-white p-2 rounded text-sm">⬅ Return to Schedule</button>
           </>
         )}
-      </div>
-
-      {/* Offscreen print component for react-to-print */}
-      <div
-        ref={printRef}
-        style={{
-          position: "absolute",
-          left: "-9999px",
-          top: 0,
-          width: "100%",
-          height: "100%",
-        }}
-      >
-        <PrintableSchedule
-          csvData={csvData}
-          numPlayers={parseInt(selectedPlayers, 10)}
-          rounds={parseInt(selectedNumRounds, 10)}
-          playerNames={playerNames}
-          showNames={showNames}
-        />
       </div>
     </div>
   );
