@@ -478,7 +478,7 @@ export default function App() {
           </>
         )}
       </div>
-   <div style={{ display: "none" }}>
+  <div style={{ position: "absolute", left: "-9999px", top: 0 }}>
   <PrintableSchedule
     ref={printRef}
     csvData={csvData}
