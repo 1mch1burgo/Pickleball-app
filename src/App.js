@@ -502,7 +502,10 @@ console.log("PRINTABLE DATA:", {
     zIndex: -1,
   }}
 >
+{/* Offscreen Printable Schedule for printing */}
+<div style={{ position: "absolute", left: "-9999px", top: 0 }}>
   <PrintableSchedule
+    ref={printRef} // attach ref directly to PrintableSchedule
     csvData={csvData}
     numPlayers={parseInt(selectedPlayers, 10)}
     rounds={parseInt(selectedNumRounds, 10)}
