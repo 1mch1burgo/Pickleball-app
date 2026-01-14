@@ -486,14 +486,21 @@ console.log("PRINTABLE DATA:", {
       </div>
   <div style={{ position: "absolute", left: "-9999px", top: 0 }}>
 {/* Offscreen print component */}
-{csvData.length > 0 && (
-  <div style={{ display: "none" }} ref={printRef}>
-    <PrintableSchedule
-      csvData={csvData}
-      numPlayers={parseInt(selectedPlayers, 10)}
-      rounds={parseInt(selectedNumRounds, 10)}
-      playerNames={playerNames}
-      showNames={showNames}
-    />
-  </div>
+<div
+  ref={printRef}
+  style={{
+    position: "absolute",
+    left: "-9999px",
+    top: 0,
+    width: "100%",
+  }}
+>
+  <PrintableSchedule
+    csvData={csvData}
+    numPlayers={parseInt(selectedPlayers, 10)}
+    rounds={parseInt(selectedNumRounds, 10)}
+    playerNames={playerNames}
+    showNames={showNames}
+  />
+</div>
 )}
