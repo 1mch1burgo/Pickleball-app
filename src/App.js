@@ -20,7 +20,7 @@ export default function App() {
         }, 10);
       }
     });
-
+const printRef = useRef(null);
     return () => {
       window.removeEventListener("popstate", stopBackClose);
     };
@@ -30,7 +30,7 @@ export default function App() {
   const [playersOptions, setPlayersOptions] = useState([]);
   const [courtsOptions, setCourtsOptions] = useState([]);
   const [roundsOptions, setRoundsOptions] = useState([]);
-  const printRef = useRef(null);
+ 
   const [showNames, setShowNames] = useState(true);
 
   const handlePrint = useReactToPrint({
@@ -478,7 +478,7 @@ export default function App() {
           </>
         )}
       </div>
-  <div style={{ position: "absolute", left: "-9999px", top: 0 }}>
+  <div style={{ display: "none" }}>
   <PrintableSchedule
     ref={printRef}
     csvData={csvData}
