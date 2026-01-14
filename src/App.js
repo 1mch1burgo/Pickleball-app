@@ -485,27 +485,19 @@ console.log("PRINTABLE DATA:", {
         )}
       </div>
   <div style={{ position: "absolute", left: "-9999px", top: 0 }}>
- {/* Hidden PrintableSchedule for printing */}
-  <div
-    ref={printRef} // Only attach ref here
-    style={{
-      position: "absolute",
-      top: 0,
-      left: 0,
-      width: "100%",
-      opacity: 0,
-      pointerEvents: "none",
-      zIndex: -1,
-    }}
-  >
-    <PrintableSchedule
-      csvData={csvData}
-      numPlayers={parseInt(selectedPlayers, 10)}
-      rounds={parseInt(selectedNumRounds, 10)}
-      playerNames={playerNames}
-      showNames={showNames}
-    />
-  </div>
+{/* Hidden PrintableSchedule for printing */}
+<div
+  style={{ display: "none" }}
+  ref={printRef}
+>
+  <PrintableSchedule
+    csvData={csvData}
+    numPlayers={parseInt(selectedPlayers, 10)}
+    rounds={parseInt(selectedNumRounds, 10)}
+    playerNames={playerNames}
+    showNames={showNames}
+  />
+</div>
       </div>
   );
 }
