@@ -155,29 +155,35 @@ const handlePrint = useReactToPrint({
           </div>
         )}
 
-        {step === 3 && (
-          <div>
-            <h2 className="text-lg font-bold mb-4 text-center">
-              Round {currentRound} of {rounds}
-            </h2>
-            {renderRound(currentRound)}
+       {step === 3 && (
+  <div className="space-y-6">
+    <h2 className="text-lg font-bold text-center">
+      Round {currentRound} of {rounds}
+    </h2>
 
-            <div className="flex justify-between mt-6">
-              <button
-                onClick={() => setCurrentRound((r) => Math.max(1, r - 1))}
-                disabled={currentRound === 1}
-                className="bg-gray-300 text-black px-4 py-2 rounded disabled:opacity-50"
-              >
-                Previous
-              </button>
-              <button
-                onClick={() => setCurrentRound((r) => Math.min(Number(rounds), r + 1))}
-                disabled={currentRound >= Number(rounds)}
-                className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50"
-              >
-                Next
-              </button>
-            <div className="mt-6 border-t pt-4 space-y-2">
+    {/* Render current round schedule */}
+    {renderRound(currentRound)}
+
+    {/* Navigation buttons */}
+    <div className="flex justify-between mt-4">
+      <button
+        onClick={() => setCurrentRound((r) => Math.max(1, r - 1))}
+        disabled={currentRound === 1}
+        className="bg-gray-300 text-black px-4 py-2 rounded disabled:opacity-50"
+      >
+        Previous
+      </button>
+      <button
+        onClick={() => setCurrentRound((r) => Math.min(Number(rounds), r + 1))}
+        disabled={currentRound >= Number(rounds)}
+        className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50"
+      >
+        Next
+      </button>
+    </div>
+
+    {/* Print options */}
+    <div className="mt-6 border-t pt-4 space-y-2">
   <label className="flex items-center gap-2">
     <input
       type="checkbox"
