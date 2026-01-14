@@ -407,12 +407,15 @@ export default function App() {
     </button>
 
     {/* PRINT CONTROLS */}
-    <button
-      className="text-xs text-green-700 underline"
-      onClick={handlePrint}
-    >
-      🖨 Print
-    </button>
+   <button
+  className="text-xs text-green-700 underline"
+  onClick={() => {
+    console.log("PRINT CLICKED", printRef.current);
+    handlePrint();
+  }}
+>
+  🖨 Print
+</button>
 
     <label className="text-xs flex items-center gap-1 text-gray-700">
       <input
