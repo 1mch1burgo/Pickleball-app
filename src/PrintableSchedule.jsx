@@ -3,15 +3,16 @@ import React, { forwardRef } from "react";
 const PrintableSchedule = forwardRef(
   ({ csvData, numPlayers, rounds, playerNames, showNames }, ref) => {
 
-    const display = (p) =>
-      showNames ? `${p} (${playerNames[p] || ""})` : p;
+    // Helper to display player number with optional name
+    const display = (p) => (showNames ? `${p} (${playerNames[p] || ""})` : p);
 
+    // Build rounds data from CSV
     const buildRounds = () => {
       const output = [];
 
       for (let r = 1; r <= rounds; r++) {
         const roundData = csvData.filter(
-          row =>
+          (row) =>
             parseInt(row.Players) === parseInt(numPlayers) &&
             parseInt(row.Round) === r
         );
@@ -22,11 +23,11 @@ const PrintableSchedule = forwardRef(
         const courts = {};
         const byes = [];
 
-        Object.keys(row).forEach(key => {
-          if (key.match(/^\d+[a-d]$/)) {
-            const court = key.match(/^\d+/)[0];
-            if (!courts[court]) courts[court] = {};
-            courts[court][key.slice(-1)] = row[key];
+        Object.keys(row).forEach((key) => {
+          if (/^\d+[a-d]$/.test(key)) {
+            const courtNum = key.match(/^\d+/)[0];
+            if (!courts[courtNum]) courts[courtNum] = {};
+            courts[courtNum][key.slice(-1)] = row[key];
           } else if (key.startsWith("b") && row[key] && row[key] !== "x") {
             byes.push(row[key]);
           }
@@ -41,19 +42,19 @@ const PrintableSchedule = forwardRef(
     const roundsData = buildRounds();
 
     return (
-      <div ref={ref}>
-        {roundsData.map(r => (
-          <div key={r.round} className="round">
-            <div className="round-title">ROUND {r.round}</div>
+      <div ref={ref} className="printable-schedule">
+        {roundsData.map((r) => (
+          <div key={r.round} className="round mb-6">
+            <h3 className="text-xl font-bold mb-2">ROUND {r.round}</h3>
 
-            <div className="courts-row">
-              {Object.keys(r.courts).map(courtNum => {
+            <div className="space-y-2">
+              {Object.keys(r.courts).map((courtNum) => {
                 const c = r.courts[courtNum];
                 return (
-                  <div key={courtNum} className="court">
-                    <strong>C{courtNum}:</strong>{" "}
-                    {display(c.a)} {display(c.b)}
-                    <span className="vs">vs</span>
+                  <div key={courtNum} className="court p-2 border rounded">
+                    <strong>Court {courtNum}:</strong>{" "}
+                    {display(c.a)} {display(c.b)}{" "}
+                    <span className="font-semibold">vs</span>{" "}
                     {display(c.c)} {display(c.d)}
                   </div>
                 );
@@ -61,9 +62,8 @@ const PrintableSchedule = forwardRef(
             </div>
 
             {r.byes.length > 0 && (
-              <div className="byes">
-                <strong>Byes:</strong>{" "}
-                {r.byes.map(display).join(" ")}
+              <div className="byes mt-2">
+                <strong>Byes:</strong> {r.byes.map(display).join(", ")}
               </div>
             )}
           </div>
