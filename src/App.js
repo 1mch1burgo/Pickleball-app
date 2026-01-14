@@ -431,13 +431,7 @@ export default function App() {
     ✏️ Edit
   </button>
 </div>
-              <div className="flex items-start gap-3">
-                <button className="text-xs bg-red-500 text-white px-2 py-1 rounded shadow" onClick={handleRefresh}>🔄 Refresh</button>
-                <button className="text-xs text-blue-600 underline" onClick={() => setView("matrix")}>📊 Matrix</button>
-              </div>
-              <button className="text-xs text-blue-600 underline" onClick={() => setView("input")}>✏️ Edit</button>
-            </div>
-
+             
             {filteredRounds.length === 0 ? (
               <p className="text-sm text-center text-gray-500">No rounds available.</p>
             ) : (
