@@ -413,12 +413,9 @@ console.log("PRINTABLE DATA:", {
     </button>
 
     {/* PRINT CONTROLS */}
-   <button
+<button
   className="text-xs text-green-700 underline"
-  onClick={() => {
-    console.log("PRINT CLICKED", printRef.current);
-    handlePrint();
-  }}
+  onClick={handlePrint}
 >
   🖨 Print
 </button>
@@ -488,31 +485,27 @@ console.log("PRINTABLE DATA:", {
         )}
       </div>
   <div style={{ position: "absolute", left: "-9999px", top: 0 }}>
-{/* PRINTABLE SCHEDULE - keep rendered but invisible */}
-<div
-  ref={printRef}
-  style={{
-    position: "fixed",
-    top: 0,
-    left: 0,
-    width: "100%",
-    height: "100%",
-    opacity: 0,
-    pointerEvents: "none",
-    zIndex: -1,
-  }}
->
-{/* Offscreen Printable Schedule for printing */}
-<div style={{ position: "absolute", left: "-9999px", top: 0 }}>
-  <PrintableSchedule
-    ref={printRef} // attach ref directly to PrintableSchedule
-    csvData={csvData}
-    numPlayers={parseInt(selectedPlayers, 10)}
-    rounds={parseInt(selectedNumRounds, 10)}
-    playerNames={playerNames}
-    showNames={showNames}
-  />
-</div>
+ {/* Hidden PrintableSchedule for printing */}
+  <div
+    ref={printRef} // Only attach ref here
+    style={{
+      position: "absolute",
+      top: 0,
+      left: 0,
+      width: "100%",
+      opacity: 0,
+      pointerEvents: "none",
+      zIndex: -1,
+    }}
+  >
+    <PrintableSchedule
+      csvData={csvData}
+      numPlayers={parseInt(selectedPlayers, 10)}
+      rounds={parseInt(selectedNumRounds, 10)}
+      playerNames={playerNames}
+      showNames={showNames}
+    />
+  </div>
       </div>
   );
 }
