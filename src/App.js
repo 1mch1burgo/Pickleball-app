@@ -5,38 +5,18 @@ import PrintableSchedule from "./PrintableSchedule";
 import { useReactToPrint } from "react-to-print";
 
 export default function App() {
-  // Prevent Android Back Button from closing PWA
-  useEffect(() => {
-    window.history.pushState({ page: 1 }, "", "");
-    const stopBackClose = () => {
-      window.history.pushState({ page: 1 }, "", "");
-    };
-    window.addEventListener("popstate", stopBackClose);
-
-    document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "hidden") {
-        setTimeout(() => {
-          window.history.pushState({ page: 1 }, "", "");
-        }, 10);
-      }
-    });
-const printRef = useRef(null);
-    return () => {
-      window.removeEventListener("popstate", stopBackClose);
-    };
-  }, []);
-
+  const printRef = useRef(null); // <-- top level, outside of useEffect
   const [csvData, setCsvData] = useState([]);
   const [playersOptions, setPlayersOptions] = useState([]);
   const [courtsOptions, setCourtsOptions] = useState([]);
   const [roundsOptions, setRoundsOptions] = useState([]);
- 
   const [showNames, setShowNames] = useState(true);
 
   const handlePrint = useReactToPrint({
     content: () => printRef.current,
     documentTitle: "Pickleball Schedule",
-      });
+  });
+
   const [selectedPlayers, setSelectedPlayers] = useState(
     localStorage.getItem("selectedPlayers") || ""
   );
@@ -54,9 +34,29 @@ const printRef = useRef(null);
   const [filteredRounds, setFilteredRounds] = useState([]);
   const [currentRoundIndex, setCurrentRoundIndex] = useState(0);
   const [view, setView] = useState("input"); // input | schedule | matrix
-
   const touchStartXRef = useRef(null);
   const touchEndXRef = useRef(null);
+
+  // Prevent Android Back Button from closing PWA
+  useEffect(() => {
+    window.history.pushState({ page: 1 }, "", "");
+    const stopBackClose = () => {
+      window.history.pushState({ page: 1 }, "", "");
+    };
+    window.addEventListener("popstate", stopBackClose);
+
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "hidden") {
+        setTimeout(() => {
+          window.history.pushState({ page: 1 }, "", "");
+        }, 10);
+      }
+    });
+
+    return () => {
+      window.removeEventListener("popstate", stopBackClose);
+    };
+  }, []);
 
   // Save all state to localStorage whenever it changes
   useEffect(() => {
