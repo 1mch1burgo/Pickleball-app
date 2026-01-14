@@ -476,31 +476,39 @@ console.log("PRINTABLE DATA:", {
           </>
         )}
 
-        {/* Matrix view */}
+               {/* Matrix view */}
         {view === "matrix" && (
           <>
             {renderMatrix()}
-            <button onClick={() => setView("schedule")} className="mt-2 w-full bg-blue-600 text-white p-2 rounded text-sm">⬅ Return to Schedule</button>
+            <button
+              onClick={() => setView("schedule")}
+              className="mt-2 w-full bg-blue-600 text-white p-2 rounded text-sm"
+            >
+              ⬅ Return to Schedule
+            </button>
           </>
         )}
       </div>
-  <div style={{ position: "absolute", left: "-9999px", top: 0 }}>
-{/* Offscreen print component */}
-<div
-  ref={printRef}
-  style={{
-    position: "absolute",
-    left: "-9999px",
-    top: 0,
-    width: "100%",
-  }}
->
-  <PrintableSchedule
-    csvData={csvData}
-    numPlayers={parseInt(selectedPlayers, 10)}
-    rounds={parseInt(selectedNumRounds, 10)}
-    playerNames={playerNames}
-    showNames={showNames}
-  />
-</div>
-)}
+
+      {/* Offscreen print component for react-to-print */}
+      <div
+        ref={printRef}
+        style={{
+          position: "absolute",
+          left: "-9999px",
+          top: 0,
+          width: "100%",
+          height: "100%",
+        }}
+      >
+        <PrintableSchedule
+          csvData={csvData}
+          numPlayers={parseInt(selectedPlayers, 10)}
+          rounds={parseInt(selectedNumRounds, 10)}
+          playerNames={playerNames}
+          showNames={showNames}
+        />
+      </div>
+    </div>
+  );
+}
