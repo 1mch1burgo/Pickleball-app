@@ -488,15 +488,27 @@ console.log("PRINTABLE DATA:", {
         )}
       </div>
   <div style={{ position: "absolute", left: "-9999px", top: 0 }}>
- <PrintableSchedule
+{/* PRINTABLE SCHEDULE - keep rendered but invisible */}
+<div
   ref={printRef}
-  csvData={csvData}
-  numPlayers={parseInt(selectedPlayers, 10)}
-  rounds={parseInt(selectedNumRounds, 10)}
-  playerNames={playerNames}
-  showNames={showNames}
-
-/>
+  style={{
+    position: "fixed",
+    top: 0,
+    left: 0,
+    width: "100%",
+    height: "100%",
+    opacity: 0,
+    pointerEvents: "none",
+    zIndex: -1,
+  }}
+>
+  <PrintableSchedule
+    csvData={csvData}
+    numPlayers={parseInt(selectedPlayers, 10)}
+    rounds={parseInt(selectedNumRounds, 10)}
+    playerNames={playerNames}
+    showNames={showNames}
+  />
 </div>
       </div>
   );
