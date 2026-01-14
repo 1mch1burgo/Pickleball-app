@@ -1,4 +1,5 @@
-import { useRef, useState as usePrintState } from "react";
+import { useRef, useState, useEffect } from "react";
+
 import { useReactToPrint } from "react-to-print";
 import PrintableSchedule from "./PrintableSchedule";
 import "./print.css";
@@ -13,7 +14,7 @@ export default function PickleballSchedulerApp() {
   const [step, setStep] = useState(1);
   const [currentRound, setCurrentRound] = useState(1);
 const printRef = useRef();
-const [showNames, setShowNames] = usePrintState(false);
+const [showNames, setShowNames] = useState(false);
 
 const maxCourts = csvData.length
   ? Math.max(
