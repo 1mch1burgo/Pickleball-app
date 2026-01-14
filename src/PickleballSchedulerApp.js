@@ -156,17 +156,17 @@ const handlePrint = useReactToPrint({
           </div>
         )}
 
-      {step === 3 && (
+     {step === 3 && (
   <div className="space-y-6">
     {/* Round header */}
     <h2 className="text-lg font-bold text-center">
       Round {currentRound} of {rounds}
     </h2>
 
-    {/* Render the current round schedule */}
+    {/* Render current round schedule */}
     {renderRound(currentRound)}
 
-    {/* Round navigation */}
+    {/* Navigation buttons */}
     <div className="flex justify-between mt-4">
       <button
         onClick={() => setCurrentRound((r) => Math.max(1, r - 1))}
@@ -218,6 +218,6 @@ const handlePrint = useReactToPrint({
   </div>
 )}
 
-/* End of main container div */
-</div>
-</div>
+/* Close main containers properly */
+      </div> {/* closes max-w-xl */}
+    </div>   {/* closes min-h-screen */}
