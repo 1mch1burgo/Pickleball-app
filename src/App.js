@@ -489,7 +489,13 @@ export default function App() {
   rounds={parseInt(selectedNumRounds, 10)}
   playerNames={playerNames}
   showNames={showNames}
-console.log("PRINTABLE DATA:", { csvData, numPlayers, rounds, playerNames, showNames });
+console.log("PRINTABLE DATA:", {
+  csvData,
+  numPlayers: parseInt(selectedPlayers, 10),
+  rounds: parseInt(selectedNumRounds, 10),
+  playerNames,
+  showNames
+});
 />
 </div>
       </div>
