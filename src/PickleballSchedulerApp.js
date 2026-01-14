@@ -158,17 +158,12 @@ const handlePrint = useReactToPrint({
 
 {step === 3 && (
   <div className="space-y-6 flex flex-col">
-    {/* Round header */}
     <h2 className="text-lg font-bold text-center">
       Round {currentRound} of {rounds}
     </h2>
 
-    {/* Render the current round schedule */}
-    <div className="space-y-4">
-      {renderRound(currentRound)}
-    </div>
+    {renderRound(currentRound)}
 
-    {/* Round navigation */}
     <div className="flex justify-between mt-4">
       <button
         onClick={() => setCurrentRound((r) => Math.max(1, r - 1))}
@@ -177,7 +172,6 @@ const handlePrint = useReactToPrint({
       >
         Previous
       </button>
-
       <button
         onClick={() => setCurrentRound((r) => Math.min(Number(rounds), r + 1))}
         disabled={currentRound >= Number(rounds)}
@@ -187,17 +181,14 @@ const handlePrint = useReactToPrint({
       </button>
     </div>
 
-    {/* Print controls */}
-    <div className="mt-6">
-      <button
-        onClick={handlePrint}
-        className="bg-green-600 text-white px-4 py-2 rounded w-full"
-      >
-        🖨 Print full schedule
-      </button>
-    </div>
+    {/* PRINT BUTTON */}
+    <button
+      onClick={handlePrint}
+      className="bg-green-600 text-white px-4 py-2 rounded w-full mt-4"
+    >
+      🖨 Print full schedule
+    </button>
 
-    {/* Hidden PrintableSchedule for printing */}
     <div style={{ position: "absolute", top: "-9999px", left: "-9999px" }}>
       <PrintableSchedule
         ref={printRef}
