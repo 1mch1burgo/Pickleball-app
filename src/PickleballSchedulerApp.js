@@ -156,14 +156,14 @@ const handlePrint = useReactToPrint({
           </div>
         )}
 
-    {step === 3 && (
+{step === 3 && (
   <div className="space-y-6 flex flex-col">
     {/* Round header */}
     <h2 className="text-lg font-bold text-center">
       Round {currentRound} of {rounds}
     </h2>
 
-    {/* Render current round schedule */}
+    {/* Render the current round schedule */}
     <div className="space-y-4">
       {renderRound(currentRound)}
     </div>
@@ -187,7 +187,7 @@ const handlePrint = useReactToPrint({
       </button>
     </div>
 
-    {/* Print button */}
+    {/* Print controls */}
     <div className="mt-6">
       <button
         onClick={handlePrint}
@@ -197,7 +197,7 @@ const handlePrint = useReactToPrint({
       </button>
     </div>
 
-    {/* Hidden PrintableSchedule for react-to-print */}
+    {/* Hidden PrintableSchedule for printing */}
     <div style={{ position: "absolute", top: "-9999px", left: "-9999px" }}>
       <PrintableSchedule
         ref={printRef}
