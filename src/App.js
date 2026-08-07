@@ -39,9 +39,12 @@ export default function App() {
     localStorage.getItem("selectedNumRounds") || ""
   );
 
+  // generic playerNames plus per-Players defaults map
   const [playerNames, setPlayerNames] = useState(
     JSON.parse(localStorage.getItem("playerNames") || "[]")
   );
+  const [defaultNamesMap, setDefaultNamesMap] = useState({}); // { PlayersKey: ["Name1","Name2",...] }
+
   const previousNamesRef = useRef([]);
   const [filteredRounds, setFilteredRounds] = useState([]);
   const [currentRoundIndex, setCurrentRoundIndex] = useState(0);
@@ -50,7 +53,7 @@ export default function App() {
   const touchStartXRef = useRef(null);
   const touchEndXRef = useRef(null);
 
-  // Save all state to localStorage whenever it changes
+  // Save some state to localStorage whenever it changes (selections)
   useEffect(() => {
     localStorage.setItem("selectedPlayers", selectedPlayers);
   }, [selectedPlayers]);
@@ -60,11 +63,35 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem("selectedNumRounds", selectedNumRounds);
   }, [selectedNumRounds]);
-  useEffect(() => {
-    localStorage.setItem("playerNames", JSON.stringify(playerNames));
-  }, [playerNames]);
 
-  // Load CSV
+  // Persist playerNames generically and also per-player-count key when available
+  useEffect(() => {
+    try {
+      localStorage.setItem("playerNames", JSON.stringify(playerNames));
+      if (selectedPlayers) {
+        localStorage.setItem(`playerNames_${selectedPlayers}`, JSON.stringify(playerNames));
+      }
+    } catch (err) {
+      console.warn("Could not persist playerNames:", err);
+    }
+  }, [playerNames, selectedPlayers]);
+
+  // helper: read stored names for a specific Players key
+  const getStoredNamesForPlayers = (playersKey) => {
+    if (!playersKey) return null;
+    try {
+      const key = `playerNames_${playersKey}`;
+      const raw = localStorage.getItem(key);
+      if (!raw) return null;
+      const arr = JSON.parse(raw);
+      return Array.isArray(arr) ? arr : null;
+    } catch (err) {
+      console.warn("Error reading stored names:", err);
+      return null;
+    }
+  };
+
+  // Load CSV and build defaults map
   useEffect(() => {
     Papa.parse("/schedule.csv", {
       download: true,
@@ -75,6 +102,20 @@ export default function App() {
         setCsvData(raw);
         const playerSet = [...new Set(raw.map((r) => r.Players).filter(Boolean))];
         setPlayersOptions(playerSet.sort((a, b) => parseInt(a) - parseInt(b)));
+
+        // build defaults map from CSV Names column (take first non-empty Names per Players)
+        const map = {};
+        raw.forEach((r) => {
+          const p = r.Players;
+          const namesValue = r.Names && r.Names.trim();
+          if (p && namesValue) {
+            if (!map[p]) {
+              // split on commas and trim
+              map[p] = namesValue.split(",").map((s) => s.trim());
+            }
+          }
+        });
+        setDefaultNamesMap(map);
       },
       error: (err) => console.error("CSV load error:", err),
     });
@@ -89,20 +130,42 @@ export default function App() {
     };
   }, []);
 
-  // Compute courts options
+  // Compute courts options and set playerNames when selectedPlayers changes
   useEffect(() => {
     if (!selectedPlayers) return;
     const rowsForPlayers = csvData.filter((r) => r.Players === String(selectedPlayers));
     const courtsSet = [...new Set(rowsForPlayers.map((r) => r.Courts).filter(Boolean))];
     setCourtsOptions(courtsSet.sort((a, b) => parseInt(a) - parseInt(b)));
 
+    // reset downstream selections
+    setSelectedCourts("");
+    setRoundsOptions([]);
+    setSelectedNumRounds("");
+
+    // ensure playerNames array sized correctly (preserve existing names where possible)
     const needed = parseInt(selectedPlayers, 10) || 0;
     setPlayerNames((cur) => {
-      const copy = cur.slice(0, needed);
+      // 1) prefer per-Players stored names (localStorage)
+      const stored = getStoredNamesForPlayers(selectedPlayers);
+      if (stored) {
+        const copy = stored.slice(0, needed);
+        while (copy.length < needed) copy.push("");
+        return copy;
+      }
+
+      // 2) then prefer CSV defaults
+      if (defaultNamesMap[selectedPlayers]) {
+        const copy = defaultNamesMap[selectedPlayers].slice(0, needed);
+        while (copy.length < needed) copy.push("");
+        return copy;
+      }
+
+      // 3) otherwise preserve current values where possible
+      const copy = (cur || []).slice(0, needed);
       while (copy.length < needed) copy.push("");
       return copy;
     });
-  }, [selectedPlayers, csvData]);
+  }, [selectedPlayers, csvData, defaultNamesMap]);
 
   // Compute rounds options
   useEffect(() => {
@@ -419,9 +482,9 @@ export default function App() {
                 </div>
 
                 <div className="flex justify-between items-center mt-3">
-                  <button onClick={prevRound} disabled={currentRoundIndex === 0} className={`px-3 py-1 rounded text-white text-sm ${currentRoundIndex === 0 ? "bg-gray-300" : "bg-blue-600"}`}>⬅</button>
+                  <button onClick={prevRound} disabled={currentRoundIndex === 0} className={`px-3 py-1 rounded text-white text-sm ${currentRoundIndex === 0 ? "bg-gray-300" : "bg-blue-600"}`}>⬅ Previous</button>
                   <div className="text-xs text-gray-600">{currentRoundIndex + 1} / {filteredRounds.length}</div>
-                  <button onClick={nextRound} disabled={currentRoundIndex === filteredRounds.length - 1} className={`px-3 py-1 rounded text-white text-sm ${currentRoundIndex === filteredRounds.length - 1 ? "bg-gray-300" : "bg-blue-600"}`}>➡</button>
+                  <button onClick={nextRound} disabled={currentRoundIndex === filteredRounds.length - 1} className={`px-3 py-1 rounded text-white text-sm ${currentRoundIndex === filteredRounds.length - 1 ? "bg-gray-300" : "bg-blue-600"}`}>Next ➡</button>
                 </div>
               </>
             )}
